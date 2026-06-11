@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>单词五子棋：抢格连线</title>
+  <title>Word Bingo</title>
   <style>
     :root {
       /* === 配色 — 保留 Gemini / Bingo 功能版 === */
@@ -251,7 +251,7 @@
 
     .board {
       display: grid;
-      grid-template-columns: repeat(10, 1fr);
+      grid-template-columns: repeat(var(--board-size, 10), 1fr);
       gap: 5px;
       width:  min(78vh, calc(100vw - 360px));
       height: min(78vh, calc(100vw - 360px));
@@ -275,9 +275,16 @@
       font-weight: 600; color: var(--color-text-primary);
       cursor: pointer; transition: transform 0.2s var(--ease-smooth), background-color 0.2s, box-shadow 0.2s;
       user-select: none; text-align: center;
-      word-break: normal; overflow-wrap: break-word; hyphens: none;
-      padding: 1px; overflow: hidden; line-height: 1.15;
+      word-break: normal; hyphens: none;
+      padding: 2px; overflow: hidden; line-height: 1.15;
       position: relative;
+    }
+
+    /* V2.0: 单词 span — white-space: nowrap 保证不拆行，JS fitCellText 缩字 */
+    .cell-word {
+      white-space: nowrap;
+      display: inline-block;
+      max-width: 100%;
     }
 
     .cell:hover:not(.occupied) {
@@ -371,6 +378,48 @@
     .modal-actions-row { display: flex; gap: 12px; }
     .modal-actions-row .btn { flex: 1; }
 
+    /* V2.0: 词库设置弹窗 */
+    .wordbank-modal {
+      max-height: 85vh; overflow-y: auto; width: min(480px, 92vw);
+    }
+
+    .wordbank-list {
+      max-height: 45vh; overflow-y: auto;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+    }
+
+    .wordbank-item {
+      display: flex; align-items: center; padding: 5px 10px;
+      cursor: pointer; border-bottom: 1px solid var(--color-bg);
+      font-size: 14px; transition: background-color 0.15s;
+    }
+    .wordbank-item:last-child { border-bottom: none; }
+    .wordbank-item:hover { background-color: var(--color-cell-hover); }
+
+    .wordbank-item input[type="checkbox"] {
+      margin-right: 10px; width: 16px; height: 16px; cursor: pointer;
+    }
+
+    .wordbank-starred-badge {
+      margin-left: auto; font-size: 12px; color: #FAAD14;
+    }
+
+    .wordbank-controls {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .wordbank-controls label { font-size: 14px; color: var(--color-text-secondary); }
+
+    .wordbank-controls select {
+      padding: 4px 8px; border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm); font-size: 14px;
+    }
+
+    .wordbank-actions { display: flex; gap: 12px; }
+    .wordbank-actions .btn { flex: 1; }
+
     /* Winner Banner — Gemini 原版 */
     .winner-banner {
       position: absolute; top: 50%; left: 50%;
@@ -396,6 +445,40 @@
     .confetti {
       position: absolute; pointer-events: none; z-index: 40;
       width: 10px; height: 10px; border-radius: 2px;
+    }
+
+    /* 10. 烟花粒子 — V2.1 */
+    @keyframes fireworkBurst {
+      0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--fx), var(--fy)) scale(0); opacity: 0; }
+    }
+    @keyframes fireworkFade {
+      0%   { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.3); }
+    }
+
+    .firework-particle {
+      position: absolute; pointer-events: none; z-index: 45;
+      width: 6px; height: 6px; border-radius: 50%;
+      animation: fireworkBurst 1.2s ease-out forwards;
+    }
+
+    /* 11. 彩带 — V2.1 */
+    @keyframes ribbonFall {
+      0%   { transform: translateY(-60px) rotate(0deg) scaleX(1); opacity: 1; }
+      70%  { opacity: 0.8; }
+      100% { transform: translateY(105vh) rotate(720deg) scaleX(0.6); opacity: 0; }
+    }
+    @keyframes ribbonSway {
+      0%, 100% { margin-left: 0; }
+      25%  { margin-left: 15px; }
+      75%  { margin-left: -15px; }
+    }
+
+    .ribbon {
+      position: absolute; pointer-events: none; z-index: 42;
+      width: 8px; height: 22px; border-radius: 4px;
+      animation: ribbonFall 2.5s ease-in forwards, ribbonSway 1.2s ease-in-out infinite;
     }
 
     /* ================================================================
@@ -453,14 +536,20 @@
   <!-- ============ 顶部栏 — Gemini 原版 ============ -->
   <header class="topbar">
     <div class="topbar-left">
-      <h1 class="title">单词五子棋</h1>
-      <span class="subtitle">红蓝对战 · 先连五格获胜</span>
+      <h1 class="title" id="ui-title">单词 Bingo</h1>
+      <span class="subtitle" id="ui-subtitle">红蓝对战 · 自定义连线获胜</span>
     </div>
     <div style="display: flex; align-items: center; gap: 16px;">
       <span class="mode-tag" id="topModeTag">当前：轮流模式</span>
-      <button class="btn btn-outline" onclick="toggleFullscreen()">
+      <button class="btn btn-outline" onclick="toggleSound()" id="btn-sound" style="font-weight:bold;">
+        音效：关
+      </button>
+      <button class="btn btn-outline" onclick="toggleLanguage()" id="btn-lang" style="font-weight:bold;">
+        中 / En
+      </button>
+      <button class="btn btn-outline" id="btn-fullscreen" onclick="toggleFullscreen()">
         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-        全屏
+        <span id="ui-fullscreen">全屏</span>
       </button>
     </div>
   </header>
@@ -473,17 +562,43 @@
 
       <div class="game-state-text" id="gameStateText">等待开始...</div>
 
+      <!-- 棋盘尺寸 -->
+      <div class="panel-section">
+        <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span id="ui-board-size">棋盘尺寸</span>
+          <span id="sizeSuggest" style="font-size:12px; color:var(--color-blue); font-weight:normal;"></span>
+        </div>
+        <div class="controls-grid" style="grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 4px;" id="sizeBtns">
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-size="5" onclick="setBoardSize(5)">5x5</button>
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-size="6" onclick="setBoardSize(6)">6x6</button>
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-size="7" onclick="setBoardSize(7)">7x7</button>
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-size="8" onclick="setBoardSize(8)">8x8</button>
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-size="9" onclick="setBoardSize(9)">9x9</button>
+          <button class="btn btn-primary" style="padding: 4px 0; font-size: 13px;" data-size="10" onclick="setBoardSize(10)">10x10</button>
+        </div>
+      </div>
+
+      <!-- 获胜条件 -->
+      <div class="panel-section">
+        <div class="panel-title" id="ui-win-condition">获胜条件</div>
+        <div class="controls-grid" style="grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 4px;" id="winBtns">
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-win="3" onclick="setWinLength(3)" id="ui-win-3">连 3</button>
+          <button class="btn btn-outline" style="padding: 4px 0; font-size: 13px;" data-win="4" onclick="setWinLength(4)" id="ui-win-4">连 4</button>
+          <button class="btn btn-primary" style="padding: 4px 0; font-size: 13px;" data-win="5" onclick="setWinLength(5)" id="ui-win-5">连 5</button>
+        </div>
+      </div>
+
       <!-- 队伍状态 -->
       <div class="panel-section">
         <div class="team-status">
           <div class="team-card team-red" id="teamRed">
             <div class="turn-indicator" id="indicatorRed">当前回合</div>
-            <div class="team-name">红队</div>
+            <div class="team-name" id="ui-team-red">红队</div>
             <div style="font-size:12px;margin-top:4px;" id="teamRedScore">0 格</div>
           </div>
           <div class="team-card team-blue" id="teamBlue">
             <div class="turn-indicator" id="indicatorBlue">当前回合</div>
-            <div class="team-name">蓝队</div>
+            <div class="team-name" id="ui-team-blue">蓝队</div>
             <div style="font-size:12px;margin-top:4px;" id="teamBlueScore">0 格</div>
           </div>
         </div>
@@ -491,7 +606,7 @@
 
       <!-- 模式切换 — 加入 mode-slider -->
       <div class="panel-section">
-        <div class="panel-title">玩法模式</div>
+        <div class="panel-title" id="ui-play-mode">玩法模式</div>
         <div class="mode-switch" id="modeSwitchBox" data-mode="turn">
           <div class="mode-slider"></div>
           <div class="mode-btn active" id="modeTurn" onclick="setMode('turn')">轮流模式</div>
@@ -501,11 +616,13 @@
 
       <!-- 控制面板 -->
       <div class="panel-section">
-        <div class="panel-title">控制面板</div>
+        <div class="panel-title" id="ui-control-panel">控制面板</div>
         <div class="controls-grid" style="margin-bottom:12px;">
-          <button class="btn btn-outline btn-block" onclick="triggerImport()">导入词库</button>
-          <button class="btn btn-outline btn-block" onclick="generateBoard()">打乱棋盘</button>
+          <button class="btn btn-outline btn-block" id="ui-btn-import" onclick="triggerImport()">导入词库</button>
+          <button class="btn btn-outline btn-block" id="ui-btn-shuffle" onclick="generateBoard()">打乱棋盘</button>
         </div>
+        <!-- V2.0: 词库设置按钮 -->
+        <button class="btn btn-outline btn-block" id="ui-btn-settings" onclick="openWordBankSettings()" style="margin-bottom:12px;">⭐ 词库设置</button>
         <div class="controls-grid">
           <button class="btn btn-primary btn-block" id="startBtn" onclick="startGame()" style="grid-column:span 2;">开始游戏</button>
           <button class="btn btn-outline btn-block" onclick="resetGame()" style="grid-column:span 2;display:none;" id="resetBtn">重置棋盘</button>
@@ -517,10 +634,10 @@
 
       <!-- 规则提示 -->
       <div class="panel-section">
-        <div class="panel-title">规则提示</div>
+        <div class="panel-title" id="ui-rules-title">规则提示</div>
         <div class="rules-box" id="ruleText">
-          <p><strong>【轮流模式】</strong></p>
-          <p>两队轮流选择格子。答对占领该格，答错跳过并交换回合。先连成五格的一方获胜。</p>
+          <p><strong id="ui-rules-mode">【轮流模式】</strong></p>
+          <p id="ui-rules-desc">两队轮流选择格子。答对占领该格，答错跳过并交换回合。先连成 5 格的一方获胜。</p>
         </div>
       </div>
     </aside>
@@ -537,7 +654,7 @@
       <div class="winner-banner" id="winnerBanner">
         <div class="winner-title" id="winnerText">红队获胜！</div>
         <div style="display:flex;gap:16px;justify-content:center;margin-top:24px;">
-          <button class="btn btn-primary" onclick="resetGame()">再来一局</button>
+          <button class="btn btn-primary" id="ui-btn-play-again" onclick="resetGame()">再来一局</button>
         </div>
       </div>
     </main>
@@ -551,19 +668,49 @@
 
       <!-- 轮流模式按钮 -->
       <div class="modal-actions" id="turnActions">
-        <button class="btn btn-primary btn-block" onclick="handleAnswer(true)">答对，占领格子</button>
-        <button class="btn btn-outline btn-block" onclick="handleAnswer(false)">答错，跳过</button>
-        <button class="btn btn-outline btn-block" onclick="closeModal()" style="border:none;color:var(--color-text-tertiary);">取消</button>
+        <button class="btn btn-primary btn-block" id="ui-btn-correct" onclick="handleAnswer(true)">答对，占领格子</button>
+        <button class="btn btn-outline btn-block" id="ui-btn-wrong" onclick="handleAnswer(false)">答错，跳过</button>
+        <button class="btn btn-outline btn-block" id="ui-btn-cancel1" onclick="closeModal()" style="border:none;color:var(--color-text-tertiary);">取消</button>
       </div>
 
       <!-- 抢答模式按钮 -->
       <div class="modal-actions" id="buzzActions" style="display:none;">
         <div class="modal-actions-row">
-          <button class="btn btn-red" onclick="handleBuzzAnswer('red')">红队答对</button>
-          <button class="btn btn-blue" onclick="handleBuzzAnswer('blue')">蓝队答对</button>
+          <button class="btn btn-red" id="ui-btn-red-correct" onclick="handleBuzzAnswer('red')">红队答对</button>
+          <button class="btn btn-blue" id="ui-btn-blue-correct" onclick="handleBuzzAnswer('blue')">蓝队答对</button>
         </div>
-        <button class="btn btn-outline btn-block" onclick="handleBuzzAnswer('none')">无人答对，跳过</button>
-        <button class="btn btn-outline btn-block" onclick="closeModal()" style="border:none;color:var(--color-text-tertiary);">取消</button>
+        <button class="btn btn-outline btn-block" id="ui-btn-nobody" onclick="handleBuzzAnswer('none')">无人答对，跳过</button>
+        <button class="btn btn-outline btn-block" id="ui-btn-cancel2" onclick="closeModal()" style="border:none;color:var(--color-text-tertiary);">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ V2.0: 词库设置弹窗 ============ -->
+  <div class="modal-overlay" id="wordBankModal">
+    <div class="modal wordbank-modal">
+      <div class="modal-title" style="margin-bottom:12px;" id="ui-settings-title">⭐ 词库设置</div>
+      <div style="font-size:13px; color:var(--color-text-tertiary); text-align:center; margin-bottom:12px;" id="ui-settings-desc">
+        勾选需要重点练习的单词，设置星标倍数后应用
+      </div>
+
+      <div class="wordbank-controls">
+        <label for="starMultiplierSelect" id="ui-settings-multiplier">星标倍数：</label>
+        <select id="starMultiplierSelect">
+          <option value="2">2x</option>
+          <option value="3">3x</option>
+        </select>
+        <span style="font-size:12px; color:var(--color-text-tertiary);" id="ui-settings-hint">
+          （星标词出现概率 = 普通词 × 倍数）
+        </span>
+      </div>
+
+      <div class="wordbank-list" id="wordBankList">
+        <!-- JS 动态生成 -->
+      </div>
+
+      <div class="wordbank-actions">
+        <button class="btn btn-primary" id="ui-btn-apply" onclick="applyWordBankSettings()">应用并重排棋盘</button>
+        <button class="btn btn-outline" id="ui-btn-cancel3" onclick="closeWordBankSettings()">取消</button>
       </div>
     </div>
   </div>
@@ -573,13 +720,235 @@
 
   <script>
   // ============================================================
-  // 数据层 — 保留 Bingo 功能版
+  // 数据层 — V2.0 词库对象数组 { text, starred }
   // ============================================================
-  const BOARD_SIZE   = 10;
-  const WIN_LENGTH   = 5;
-  const TOTAL_CELLS  = BOARD_SIZE * BOARD_SIZE;
+  let boardSize      = 10;
+  let winLength      = 5;
+  let totalCells     = boardSize * boardSize;
+  let starMultiplier = 2;
 
-  const defaultWordBank = [
+  let currentLang = 'zh';
+  const i18n = {
+    zh: {
+      title: "单词 Bingo",
+      subtitle: "红蓝对战 · 自定义连线获胜",
+      fullscreen: "全屏",
+      boardSize: "棋盘尺寸",
+      winCondition: "获胜条件",
+      win3: "连 3",
+      win4: "连 4",
+      win5: "连 5",
+      teamRed: "红队",
+      teamBlue: "蓝队",
+      playMode: "玩法模式",
+      modeTurn: "轮流模式",
+      modeBuzz: "抢答模式",
+      controlPanel: "控制面板",
+      btnImport: "导入词库",
+      btnShuffle: "打乱棋盘",
+      btnSettings: "⭐ 词库设置",
+      btnStart: "开始游戏",
+      btnReset: "重置棋盘",
+      rulesTitle: "规则提示",
+      ruleTurnMode: "【轮流模式】",
+      ruleTurnDesc: "两队轮流选择格子。答对占领该格，答错跳过并交换回合。先连成 {n} 格的一方获胜。",
+      ruleBuzzMode: "【抢答模式】",
+      ruleBuzzDesc: "老师点击格子后，抢答成功的队伍占领该格。无人答对则跳过。先连成 {n} 格的一方获胜。",
+      stateWait: "等待开始...",
+      stateTurn: "{team}回合",
+      stateBuzz: "抢答进行中...",
+      stateWon: "{team}胜出！",
+      turnIndicator: "当前回合",
+      scoreFormat: "{n} 格",
+      wordCountFormat: "当前词数: {board}/{total}（词库 {bank} 词{star}）",
+      suggest5: "建议 5x5",
+      suggest6: "建议 5x5 或 6x6",
+      suggest7: "建议 6x6 或 7x7",
+      suggest8: "建议 7x7 或 8x8",
+      suggest9: "建议 8x8 或 9x9",
+      suggest10: "建议 9x9 或 10x10",
+      alertGameInProgressSize: "游戏进行中，切换尺寸会重置当前局，确定吗？",
+      alertGameInProgressWin: "游戏进行中，切换获胜条件会重置当前局，确定吗？",
+      alertGameInProgressMode: "游戏进行中，切换模式将重新开始，确定吗？",
+      alertGameInProgressImport: "导入词库会重置当前游戏，确定吗？",
+      alertGameInProgressShuffle: "游戏进行中，打乱棋盘会丢失当前进度，确定吗？",
+      alertGameInProgressSettings: "游戏进行中，应用词库设置会重置当前局，确定吗？",
+      alertStartFirst: "请先点击\"开始游戏\"",
+      alertFileEmpty: "文件为空或没有有效单词，词库未更改。",
+      alertFileReadFail: "文件读取失败，请重试。",
+      modalTurnSubtitle: "轮到 {team} 答题",
+      modalBuzzSubtitle: "哪一队抢答正确？",
+      btnCorrect: "答对，占领格子",
+      btnWrong: "答错，跳过",
+      btnCancel: "取消",
+      btnRedCorrect: "红队答对",
+      btnBlueCorrect: "蓝队答对",
+      btnNobody: "无人答对，跳过",
+      settingsTitle: "⭐ 词库设置",
+      settingsDesc: "勾选需要重点练习的单词，设置星标倍数后应用",
+      settingsMultiplier: "星标倍数：",
+      settingsHint: "（星标词出现概率 = 普通词 × 倍数）",
+      btnApply: "应用并重排棋盘",
+      winnerTitleRed: "🔴 红队获胜！",
+      winnerTitleBlue: "🔵 蓝队获胜！",
+      btnPlayAgain: "再来一局",
+      tagTurn: "当前：轮流模式",
+      tagBuzz: "当前：抢答模式",
+      soundLabel: "音效",
+      soundOn: "开",
+      soundOff: "关",
+      confirmOk: "确定",
+      confirmCancel: "取消"
+    },
+    en: {
+      title: "Word Bingo",
+      subtitle: "Red vs Blue · Custom line-to-win",
+      fullscreen: "Fullscreen",
+      boardSize: "Board Size",
+      winCondition: "Win Condition",
+      win3: "Connect 3",
+      win4: "Connect 4",
+      win5: "Connect 5",
+      teamRed: "Red Team",
+      teamBlue: "Blue Team",
+      playMode: "Play Mode",
+      modeTurn: "Turn-based",
+      modeBuzz: "Buzz-in",
+      controlPanel: "Controls",
+      btnImport: "Import Words",
+      btnShuffle: "Shuffle Board",
+      btnSettings: "⭐ Word Bank",
+      btnStart: "Start Game",
+      btnReset: "Reset Game",
+      rulesTitle: "Rules",
+      ruleTurnMode: "[Turn-based]",
+      ruleTurnDesc: "Teams take turns. Answer correctly to occupy a cell, incorrectly to skip. Connect {n} cells to win.",
+      ruleBuzzMode: "[Buzz-in]",
+      ruleBuzzDesc: "Teacher clicks a cell, the fastest team to answer correctly occupies it. Connect {n} cells to win.",
+      stateWait: "Waiting to start...",
+      stateTurn: "{team}'s Turn",
+      stateBuzz: "Buzz-in active...",
+      stateWon: "{team} Wins!",
+      turnIndicator: "Current Turn",
+      scoreFormat: "{n} Cells",
+      wordCountFormat: "Words: {board}/{total} (Bank: {bank}{star})",
+      suggest5: "Suggest 5x5",
+      suggest6: "Suggest 5x5 or 6x6",
+      suggest7: "Suggest 6x6 or 7x7",
+      suggest8: "Suggest 7x7 or 8x8",
+      suggest9: "Suggest 8x8 or 9x9",
+      suggest10: "Suggest 9x9 or 10x10",
+      alertGameInProgressSize: "Game in progress. Changing size will reset the game. Continue?",
+      alertGameInProgressWin: "Game in progress. Changing win condition will reset the game. Continue?",
+      alertGameInProgressMode: "Game in progress. Changing mode will reset the game. Continue?",
+      alertGameInProgressImport: "Importing words will reset the current game. Continue?",
+      alertGameInProgressShuffle: "Game in progress. Shuffling will reset the current game. Continue?",
+      alertGameInProgressSettings: "Game in progress. Applying settings will reset the game. Continue?",
+      alertStartFirst: "Please click 'Start Game' first.",
+      alertFileEmpty: "File is empty or invalid. Word bank unchanged.",
+      alertFileReadFail: "Failed to read file. Please try again.",
+      modalTurnSubtitle: "{team}'s Turn to Answer",
+      modalBuzzSubtitle: "Which team answered correctly?",
+      btnCorrect: "Correct, Occupy",
+      btnWrong: "Wrong, Skip",
+      btnCancel: "Cancel",
+      btnRedCorrect: "Red Correct",
+      btnBlueCorrect: "Blue Correct",
+      btnNobody: "Nobody, Skip",
+      settingsTitle: "⭐ Word Bank Settings",
+      settingsDesc: "Select words to practice more often and set star multiplier.",
+      settingsMultiplier: "Multiplier:",
+      settingsHint: "(Starred probability = Normal × Multiplier)",
+      btnApply: "Apply & Shuffle",
+      winnerTitleRed: "🔴 Red Wins!",
+      winnerTitleBlue: "🔵 Blue Wins!",
+      btnPlayAgain: "Play Again",
+      tagTurn: "Mode: Turn-based",
+      tagBuzz: "Mode: Buzz-in",
+      soundLabel: "Sound",
+      soundOn: "On",
+      soundOff: "Off",
+      confirmOk: "OK",
+      confirmCancel: "Cancel"
+    }
+  };
+
+  function t(key, params) {
+    let str = i18n[currentLang][key] || key;
+    if (params) {
+      for (let k in params) {
+        str = str.replace(new RegExp('{' + k + '}', 'g'), params[k]);
+      }
+    }
+    return str;
+  }
+
+  function toggleLanguage() {
+    currentLang = currentLang === 'zh' ? 'en' : 'zh';
+    updateI18nUI();
+  }
+
+  function updateI18nUI() {
+    $('ui-title').textContent = t('title');
+    $('ui-subtitle').textContent = t('subtitle');
+    $('ui-fullscreen').textContent = t('fullscreen');
+    $('ui-board-size').textContent = t('boardSize');
+    $('ui-win-condition').textContent = t('winCondition');
+    $('ui-win-3').textContent = t('win3');
+    $('ui-win-4').textContent = t('win4');
+    $('ui-win-5').textContent = t('win5');
+    $('ui-team-red').textContent = t('teamRed');
+    $('ui-team-blue').textContent = t('teamBlue');
+    $('ui-play-mode').textContent = t('playMode');
+    $('modeTurn').textContent = t('modeTurn');
+    $('modeBuzz').textContent = t('modeBuzz');
+    $('ui-control-panel').textContent = t('controlPanel');
+    $('ui-btn-import').textContent = t('btnImport');
+    $('ui-btn-shuffle').textContent = t('btnShuffle');
+    $('ui-btn-settings').textContent = t('btnSettings');
+    $('startBtn').textContent = t('btnStart');
+    $('resetBtn').textContent = t('btnReset');
+    $('ui-rules-title').textContent = t('rulesTitle');
+    
+    topModeTag.textContent = currentMode === 'turn' ? t('tagTurn') : t('tagBuzz');
+    
+    $('indicatorRed').textContent = t('turnIndicator');
+    $('indicatorBlue').textContent = t('turnIndicator');
+    
+    $('ui-btn-correct').textContent = t('btnCorrect');
+    $('ui-btn-wrong').textContent = t('btnWrong');
+    $('ui-btn-cancel1').textContent = t('btnCancel');
+    $('ui-btn-red-correct').textContent = t('btnRedCorrect');
+    $('ui-btn-blue-correct').textContent = t('btnBlueCorrect');
+    $('ui-btn-nobody').textContent = t('btnNobody');
+    $('ui-btn-cancel2').textContent = t('btnCancel');
+    
+    $('ui-settings-title').textContent = t('settingsTitle');
+    $('ui-settings-desc').textContent = t('settingsDesc');
+    $('ui-settings-multiplier').textContent = t('settingsMultiplier');
+    $('ui-settings-hint').textContent = t('settingsHint');
+    $('ui-btn-apply').textContent = t('btnApply');
+    $('ui-btn-cancel3').textContent = t('btnCancel');
+    $('ui-btn-play-again').textContent = t('btnPlayAgain');
+    updateSoundButton();
+
+    updateSizeSuggest();
+    updateUI();
+    setModeUIOnly();
+  }
+
+  function setModeUIOnly() {
+    if (currentMode === 'turn') {
+      $('ui-rules-mode').textContent = t('ruleTurnMode');
+      $('ui-rules-desc').textContent = t('ruleTurnDesc', {n: winLength});
+    } else {
+      $('ui-rules-mode').textContent = t('ruleBuzzMode');
+      $('ui-rules-desc').textContent = t('ruleBuzzDesc', {n: winLength});
+    }
+  }
+
+  // 原始词串（保持向后兼容）
+  const defaultWordsRaw = [
     "sun","apple","teacher","book","school","water","happy","green","jump","read",
     "dog","cat","bird","fish","tree","flower","grass","cloud","rain","snow",
     "red","blue","yellow","black","white","one","two","three","four","five",
@@ -592,9 +961,14 @@
     "tiger","lion","bear","monkey","panda","milk","banana","orange","grape","peach"
   ];
 
-  let activeWordBank    = [...defaultWordBank];
-  let boardWords        = [];
-  let gridData          = new Array(TOTAL_CELLS).fill(null);
+  // V2.0: 词库对象数组 { text: string, starred: boolean }
+  const defaultWordBank = defaultWordsRaw.map(function(w) {
+    return { text: w, starred: false };
+  });
+
+  let activeWordBank    = defaultWordBank.map(function(w) { return { text: w.text, starred: w.starred }; });
+  let boardWords        = [];    // 棋盘上每个格子的单词（纯字符串）
+  let gridData          = new Array(totalCells).fill(null);
   let gameState         = 'idle';
   let currentMode       = 'turn';
   let currentTurn       = 'red';
@@ -603,161 +977,583 @@
   // ============================================================
   // DOM 引用
   // ============================================================
-  const $ = id => document.getElementById(id);
+  var $ = function(id) { return document.getElementById(id); };
 
-  const boardEl        = $('board');
-  const gameStateText  = $('gameStateText');
-  const teamRedEl      = $('teamRed');
-  const teamBlueEl     = $('teamBlue');
-  const teamRedScoreEl = $('teamRedScore');
-  const teamBlueScoreEl= $('teamBlueScore');
-  const startBtn       = $('startBtn');
-  const resetBtn       = $('resetBtn');
-  const wordCountEl    = $('wordCount');
-  const topModeTag     = $('topModeTag');
-  const ruleText       = $('ruleText');
-  const modeTurnBtn    = $('modeTurn');
-  const modeBuzzBtn    = $('modeBuzz');
-  const modeSwitchBox  = $('modeSwitchBox');
+  var boardEl        = $('board');
+  var gameStateText  = $('gameStateText');
+  var teamRedEl      = $('teamRed');
+  var teamBlueEl     = $('teamBlue');
+  var teamRedScoreEl = $('teamRedScore');
+  var teamBlueScoreEl= $('teamBlueScore');
+  var startBtn       = $('startBtn');
+  var resetBtn       = $('resetBtn');
+  var wordCountEl    = $('wordCount');
+  var topModeTag     = $('topModeTag');
+  var ruleText       = $('ruleText');
+  var modeTurnBtn    = $('modeTurn');
+  var modeBuzzBtn    = $('modeBuzz');
+  var modeSwitchBox  = $('modeSwitchBox');
 
-  const modalOverlay   = $('questionModal');
-  const modalWord      = $('modalWord');
-  const modalSubtitle  = $('modalSubtitle');
-  const turnActions    = $('turnActions');
-  const buzzActions    = $('buzzActions');
+  var modalOverlay   = $('questionModal');
+  var modalWord      = $('modalWord');
+  var modalSubtitle  = $('modalSubtitle');
+  var turnActions    = $('turnActions');
+  var buzzActions    = $('buzzActions');
 
-  const winnerBanner   = $('winnerBanner');
-  const winnerText     = $('winnerText');
+  var winnerBanner   = $('winnerBanner');
+  var winnerText     = $('winnerText');
+
+  var wordBankModal  = $('wordBankModal');
+  var wordBankList   = $('wordBankList');
+
+  // ============================================================
+  // V2.1: 音效系统（Web Audio API，默认关闭，无外部文件）
+  // ============================================================
+  var soundEnabled = false;
+  var audioCtx = null;
+
+  function getAudioCtx() {
+    if (audioCtx) return audioCtx;
+    try {
+      var Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return null;
+      audioCtx = new Ctor();
+    } catch(e) {
+      return null;
+    }
+    return audioCtx;
+  }
+
+  function playTone(freq, type, duration, vol, rampDown) {
+    if (!soundEnabled) return;
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+
+    if (rampDown === undefined) rampDown = true;
+
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
+    if (rampDown) {
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    }
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  function playClick() {
+    playTone(800, 'square', 0.06, 0.08);
+  }
+
+  function playSuccess() {
+    if (!soundEnabled) return;
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    // 双音上行短音
+    playTone(523, 'sine', 0.1, 0.12);
+    setTimeout(function() { playTone(659, 'sine', 0.12, 0.12); }, 60);
+  }
+
+  function playWin() {
+    if (!soundEnabled) return;
+    var ctx = getAudioCtx();
+    if (!ctx) return;
+    // 上行琶音：C5 → E5 → G5 → C6，总长 < 0.8s
+    var notes = [523, 659, 784, 1047];
+    for (var n = 0; n < notes.length; n++) {
+      (function(freq, delay) {
+        setTimeout(function() { playTone(freq, 'triangle', 0.18, 0.15, true); }, delay);
+      })(notes[n], n * 100);
+    }
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    updateSoundButton();
+  }
+
+  function updateSoundButton() {
+    var btn = $('btn-sound');
+    if (btn) {
+      btn.textContent = t('soundLabel') + '：' + (soundEnabled ? t('soundOn') : t('soundOff'));
+    }
+  }
 
   // ============================================================
   // 工具 — 保留 Bingo 功能版
   // ============================================================
   function shuffle(arr) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
+    var a = [];
+    for (var i = 0; i < arr.length; i++) a.push(arr[i]);
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
     }
     return a;
   }
 
+  // ============================================================
+  // V2.0: pickWords — 星标词权重 + 中心偏向 + 分散放置
+  // ============================================================
   function pickWords(bank) {
     if (!bank || bank.length === 0) return [];
-    if (bank.length >= TOTAL_CELLS) {
-      return shuffle(bank).slice(0, TOTAL_CELLS);
+
+    // Step 1: 构建加权候选池
+    var pool = [];
+    for (var i = 0; i < bank.length; i++) {
+      var entry = bank[i];
+      var weight = entry.starred ? starMultiplier : 1;
+      for (var w = 0; w < weight; w++) {
+        pool.push(entry.text);
+      }
     }
-    const reps = Math.ceil(TOTAL_CELLS / bank.length);
-    const pool = [];
-    for (let i = 0; i < reps; i++) pool.push(...shuffle(bank));
-    return pool.slice(0, TOTAL_CELLS);
+
+    // Step 2: 洗牌并取 totalCells 个
+    var shuffled = shuffle(pool);
+    // 如果池不够，重复填充
+    if (shuffled.length < totalCells) {
+      var reps = Math.ceil(totalCells / pool.length);
+      var bigPool = [];
+      for (var r = 0; r < reps; r++) {
+        var s = shuffle(pool);
+        for (var si = 0; si < s.length; si++) bigPool.push(s[si]);
+      }
+      shuffled = bigPool;
+    }
+    var selected = [];
+    for (var si2 = 0; si2 < totalCells; si2++) selected.push(shuffled[si2]);
+
+    // Step 3: 识别星标词
+    var starredSet = {};
+    for (var bi = 0; bi < bank.length; bi++) {
+      if (bank[bi].starred) starredSet[bank[bi].text] = true;
+    }
+
+    var starredWords = [];
+    var normalWords = [];
+    for (var si3 = 0; si3 < selected.length; si3++) {
+      if (starredSet[selected[si3]]) {
+        starredWords.push(selected[si3]);
+      } else {
+        normalWords.push(selected[si3]);
+      }
+    }
+
+    // 如果没星标词，直接返回洗牌结果
+    if (starredWords.length === 0) return shuffle(selected);
+
+    // Step 4: 计算每个位置到中心的距离，加上随机扰动
+    var center = (boardSize - 1) / 2;
+    var maxDist = Math.sqrt(2) * center;
+    var positions = [];
+    for (var pi = 0; pi < totalCells; pi++) {
+      var x = pi % boardSize;
+      var y = Math.floor(pi / boardSize);
+      var dist = Math.sqrt((x - center) * (x - center) + (y - center) * (y - center));
+      // score: 中心近 + 随机扰动
+      var score = (1 - dist / maxDist) * 0.65 + Math.random() * 0.35;
+      positions.push({ index: pi, score: score, x: x, y: y });
+    }
+    // 按得分降序
+    positions.sort(function(a, b) { return b.score - a.score; });
+
+    // Step 5: 放置星标词，带 8 邻域分散
+    var result = new Array(totalCells);
+    for (var ri = 0; ri < totalCells; ri++) result[ri] = null;
+    var usedStar = {};
+
+    for (var sw = 0; sw < starredWords.length; sw++) {
+      var bestPos = null;
+
+      // 先找周围没有星标词的候选位
+      for (var pi2 = 0; pi2 < positions.length; pi2++) {
+        var pos = positions[pi2];
+        if (usedStar[pos.index]) continue;
+
+        var hasStarNeighbor = false;
+        for (var dx = -1; dx <= 1 && !hasStarNeighbor; dx++) {
+          for (var dy = -1; dy <= 1 && !hasStarNeighbor; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            var nx = pos.x + dx;
+            var ny = pos.y + dy;
+            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+              var ni = ny * boardSize + nx;
+              if (usedStar[ni]) hasStarNeighbor = true;
+            }
+          }
+        }
+
+        if (!hasStarNeighbor) { bestPos = pos; break; }
+      }
+
+      // 退而求其次：任意可用位
+      if (!bestPos) {
+        for (var pi3 = 0; pi3 < positions.length; pi3++) {
+          if (!usedStar[positions[pi3].index]) {
+            bestPos = positions[pi3];
+            break;
+          }
+        }
+      }
+
+      if (bestPos) {
+        result[bestPos.index] = starredWords[sw];
+        usedStar[bestPos.index] = true;
+      }
+    }
+
+    // Step 6: 剩余位填普通词（若普通词为空则循环星标词）
+    var fillPool = normalWords.length > 0 ? normalWords : (starredWords.length > 0 ? starredWords : ['?']);
+    var ni = 0;
+    for (var fi = 0; fi < totalCells; fi++) {
+      if (result[fi] === null) {
+        result[fi] = fillPool[ni % fillPool.length];
+        ni++;
+      }
+    }
+
+    return result;
   }
 
   function countTeam(team) {
-    let n = 0;
-    for (let i = 0; i < TOTAL_CELLS; i++) if (gridData[i] === team) n++;
+    var n = 0;
+    for (var i = 0; i < totalCells; i++) if (gridData[i] === team) n++;
     return n;
   }
 
   // ============================================================
-  // 渲染 — 带 cellPop stagger 入场
+  // 尺寸调整逻辑
+  // ============================================================
+  function updateSizeSuggest() {
+    var count = activeWordBank.length;
+    var suggest = '';
+    if (count <= 25) suggest = t('suggest5');
+    else if (count <= 36) suggest = t('suggest6');
+    else if (count <= 49) suggest = t('suggest7');
+    else if (count <= 64) suggest = t('suggest8');
+    else if (count <= 81) suggest = t('suggest9');
+    else suggest = t('suggest10');
+    $('sizeSuggest').textContent = suggest;
+  }
+
+  function setBoardSize(size) {
+    if (size === boardSize) return;
+    if (gameState === 'playing' && !confirm(t('alertGameInProgressSize'))) return;
+
+    boardSize = size;
+    totalCells = size * size;
+    boardEl.style.setProperty('--board-size', size);
+
+    var btns = $('sizeBtns').children;
+    for (var i = 0; i < btns.length; i++) {
+      if (parseInt(btns[i].dataset.size) === size) {
+        btns[i].className = 'btn btn-primary';
+      } else {
+        btns[i].className = 'btn btn-outline';
+      }
+    }
+
+    boardWords = pickWords(activeWordBank);
+    gridData = new Array(totalCells).fill(null);
+    selectedCellIndex = -1;
+    gameState = 'idle';
+    closeModal();
+    winnerBanner.classList.remove('show');
+    renderBoard(true);
+    updateUI();
+  }
+
+  function setWinLength(length) {
+    if (length === winLength) return;
+    if (gameState === 'playing' && !confirm(t('alertGameInProgressWin'))) return;
+
+    winLength = length;
+    var btns = $('winBtns').children;
+    for (var i = 0; i < btns.length; i++) {
+      if (parseInt(btns[i].dataset.win) === length) {
+        btns[i].className = 'btn btn-primary';
+      } else {
+        btns[i].className = 'btn btn-outline';
+      }
+    }
+    
+    setModeUIOnly();
+
+    if (gameState !== 'idle') {
+      gridData = new Array(totalCells).fill(null);
+      selectedCellIndex = -1;
+      gameState = 'idle';
+      closeModal();
+      winnerBanner.classList.remove('show');
+      renderBoard(true);
+      updateUI();
+    }
+  }
+
+  // ============================================================
+  // 渲染 — 带 cellPop stagger 入场 + V2.0 fitCellText 缩字
   // ============================================================
   function renderBoard(animate) {
     boardEl.innerHTML = '';
-    for (let i = 0; i < TOTAL_CELLS; i++) {
-      const cell = document.createElement('div');
+    for (var i = 0; i < totalCells; i++) {
+      var cell = document.createElement('div');
       cell.className = 'cell';
-      cell.textContent = boardWords[i] || '';
       cell.dataset.index = i;
-      cell.onclick = () => handleCellClick(i);
+
+      // V2.0: span.cell-word 保证 nowrap，JS 缩字
+      var span = document.createElement('span');
+      span.className = 'cell-word';
+      span.textContent = boardWords[i] || '';
+      cell.appendChild(span);
+
+      cell.onclick = (function(idx) {
+        return function() { handleCellClick(idx); };
+      })(i);
 
       // cellPop 交错入场
       if (animate) {
-        const x = i % BOARD_SIZE;
-        const y = Math.floor(i / BOARD_SIZE);
-        const delay = (x + y) * 0.02;
+        var x = i % boardSize;
+        var y = Math.floor(i / boardSize);
+        var delay = (x + y) * 0.02;
         cell.style.animation = 'cellPop 0.5s var(--ease-spring) both';
         cell.style.animationDelay = delay + 's';
-        // 动画完成后清理，否则 hover transform 冲突
-        const ms = delay * 1000 + 600;
+        var ms = delay * 1000 + 600;
         (function(c) { setTimeout(function() { c.style.animation = ''; c.style.animationDelay = ''; }, ms); })(cell);
       }
 
       if (gridData[i]) cell.classList.add('occupied', gridData[i]);
       boardEl.appendChild(cell);
     }
+
+    // V2.0: 在所有 cell 渲染到 DOM 后执行缩字适配
+    if (animate) {
+      setTimeout(fitAllCellText, 50);
+    } else {
+      // 非动画渲染使用 rAF 确保布局完成
+      requestAnimationFrame(function() {
+        requestAnimationFrame(fitAllCellText);
+      });
+    }
+  }
+
+  // V2.0: 对所有 cell 执行 fitCellText
+  function fitAllCellText() {
+    var cells = boardEl.children;
+    for (var i = 0; i < cells.length; i++) {
+      fitCellText(cells[i]);
+    }
+  }
+
+  // V2.0: 单个 cell 的字号自适应 + scaleX 兜底
+  function fitCellText(cell) {
+    var span = cell.querySelector('.cell-word');
+    if (!span) return;
+
+    var availableWidth = cell.clientWidth - 4; // 留 2px padding 余量
+    if (availableWidth <= 0) return;
+
+    // 重置：清掉上一次的 transform 和 inline font-size
+    span.style.transform = '';
+    span.style.transformOrigin = 'center';
+
+    var cellStyle = window.getComputedStyle(cell);
+    var baseSize = parseFloat(cellStyle.fontSize);
+    span.style.fontSize = baseSize + 'px';
+
+    var minFontSize = 7;
+    var fontSize = baseSize;
+
+    // 逐步缩字直到 fit 或达到下限
+    while (span.scrollWidth > availableWidth && fontSize > minFontSize) {
+      fontSize -= 0.5;
+      span.style.fontSize = fontSize + 'px';
+    }
+
+    // 兜底：缩到最小字号仍放不下 → scaleX 横向压缩
+    if (span.scrollWidth > availableWidth && availableWidth > 0) {
+      var scale = availableWidth / span.scrollWidth;
+      span.style.transform = 'scaleX(' + scale + ')';
+      span.style.transformOrigin = 'center';
+    }
   }
 
   function refreshCellStyles() {
-    const cells = boardEl.children;
-    for (let i = 0; i < cells.length; i++) {
-      const cls = ['cell'];
+    var cells = boardEl.children;
+    for (var i = 0; i < cells.length; i++) {
+      var cls = ['cell'];
       if (gridData[i]) cls.push('occupied', gridData[i]);
       cells[i].className = cls.join(' ');
+      // 保留 span.cell-word
+      var span = cells[i].querySelector('.cell-word');
+      if (!span) {
+        span = document.createElement('span');
+        span.className = 'cell-word';
+        span.textContent = boardWords[i] || '';
+        cells[i].appendChild(span);
+      }
     }
+    // refreshCellStyles 后再做一次缩字
+    requestAnimationFrame(function() {
+      requestAnimationFrame(fitAllCellText);
+    });
   }
 
   // ============================================================
   // 棋盘操作 — 带退出动画
   // ============================================================
   function generateBoard() {
-    if (gameState === 'playing' && !confirm('游戏进行中，打乱棋盘会丢失当前进度，确定吗？')) return;
+    if (gameState === 'playing' && !confirm(t('alertGameInProgressShuffle'))) return;
 
     // 退出动画
     boardEl.classList.add('exiting');
     setTimeout(function() {
       boardEl.classList.remove('exiting');
       boardWords = pickWords(activeWordBank);
-      gridData = new Array(TOTAL_CELLS).fill(null);
+      gridData = new Array(totalCells).fill(null);
       selectedCellIndex = -1;
       gameState = 'idle';
       closeModal();
       winnerBanner.classList.remove('show');
+      clearAllEffects();
       renderBoard(true);
       updateUI();
     }, 350);
   }
 
   // ============================================================
-  // 词库导入 — 保留 Bingo 功能版
+  // 词库导入 — V2.0: 支持 * 星标格式
   // ============================================================
   function triggerImport() {
     $('fileInput').click();
   }
 
   function handleFileImport(e) {
-    const file = e.target.files[0];
+    var file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
 
-    if (gameState === 'playing' && !confirm('导入词库会重置当前游戏，确定吗？')) return;
+    if (gameState === 'playing' && !confirm(t('alertGameInProgressImport'))) return;
 
-    const reader = new FileReader();
+    var reader = new FileReader();
     reader.onload = function(ev) {
-      const words = ev.target.result
+      var lines = ev.target.result
         .split(/[\r\n]+/)
         .map(function(w) { return w.trim(); })
         .filter(function(w) { return w.length > 0; });
 
-      if (words.length === 0) {
-        alert('文件为空或没有有效单词，词库未更改。');
+      if (lines.length === 0) {
+        alert(t('alertFileEmpty'));
         return;
       }
 
-      activeWordBank = words;
+      // V2.0: 解析 * 星标格式
+      activeWordBank = [];
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var starred = false;
+        var text = line;
+
+        // 匹配 "*word" 或 "* word"
+        if (line.charAt(0) === '*') {
+          starred = true;
+          text = line.substring(1).trim();
+        }
+
+        if (text.length > 0) {
+          activeWordBank.push({ text: text, starred: starred });
+        }
+      }
+
       boardWords = pickWords(activeWordBank);
-      gridData = new Array(TOTAL_CELLS).fill(null);
+      gridData = new Array(totalCells).fill(null);
       selectedCellIndex = -1;
       gameState = 'idle';
 
+      updateSizeSuggest();
       closeModal();
       winnerBanner.classList.remove('show');
       renderBoard(true);
       updateUI();
     };
     reader.onerror = function() {
-      alert('文件读取失败，请重试。');
+      alert(t('alertFileReadFail'));
     };
     reader.readAsText(file, 'UTF-8');
+  }
+
+  // ============================================================
+  // V2.0: 词库设置弹窗
+  // ============================================================
+  function openWordBankSettings() {
+    // 安全 DOM 构建 — 不用 innerHTML，防止 TXT 中的 < > & 污染 DOM
+    wordBankList.innerHTML = '';
+    for (var i = 0; i < activeWordBank.length; i++) {
+      var entry = activeWordBank[i];
+
+      var label = document.createElement('label');
+      label.className = 'wordbank-item';
+
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.setAttribute('data-index', i);
+      cb.checked = entry.starred;
+
+      var span = document.createElement('span');
+      span.textContent = entry.text;
+
+      label.appendChild(cb);
+      label.appendChild(span);
+
+      if (entry.starred) {
+        var badge = document.createElement('span');
+        badge.className = 'wordbank-starred-badge';
+        badge.textContent = '⭐';
+        label.appendChild(badge);
+      }
+
+      wordBankList.appendChild(label);
+    }
+
+    // 设置当前倍数
+    $('starMultiplierSelect').value = String(starMultiplier);
+
+    wordBankModal.classList.add('show');
+  }
+
+  function closeWordBankSettings() {
+    wordBankModal.classList.remove('show');
+  }
+
+  function applyWordBankSettings() {
+    if (gameState === 'playing') {
+      if (!confirm(t('alertGameInProgressSettings'))) return;
+    }
+
+    // 读取 checkbox 更新 activeWordBank
+    var checkboxes = wordBankList.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < checkboxes.length; i++) {
+      var idx = parseInt(checkboxes[i].dataset.index);
+      activeWordBank[idx].starred = checkboxes[i].checked;
+    }
+
+    // 读取星标倍数
+    starMultiplier = parseInt($('starMultiplierSelect').value);
+
+    // 重新生成棋盘
+    boardWords = pickWords(activeWordBank);
+    gridData = new Array(totalCells).fill(null);
+    selectedCellIndex = -1;
+    gameState = 'idle';
+
+    closeWordBankSettings();
+    closeModal();
+    winnerBanner.classList.remove('show');
+    renderBoard(true);
+    updateUI();
   }
 
   // ============================================================
@@ -765,7 +1561,7 @@
   // ============================================================
   function setMode(mode) {
     if (gameState === 'playing') {
-      if (!confirm('游戏进行中，切换模式将重新开始，确定吗？')) return;
+      if (!confirm(t('alertGameInProgressMode'))) return;
       resetGame();
     }
     currentMode = mode;
@@ -774,16 +1570,12 @@
     modeSwitchBox.setAttribute('data-mode', mode);
     modeTurnBtn.classList.toggle('active', mode === 'turn');
     modeBuzzBtn.classList.toggle('active', mode === 'buzz');
-    topModeTag.textContent = mode === 'turn' ? '当前：轮流模式' : '当前：抢答模式';
+    topModeTag.textContent = mode === 'turn' ? t('tagTurn') : t('tagBuzz');
 
     // 规则文字 fade 切换
     ruleText.classList.add('fade-out');
     setTimeout(function() {
-      if (mode === 'turn') {
-        ruleText.innerHTML = '<p><strong>【轮流模式】</strong></p><p>两队轮流选择格子。答对占领该格，答错跳过并交换回合。先连成五格的一方获胜。</p>';
-      } else {
-        ruleText.innerHTML = '<p><strong>【抢答模式】</strong></p><p>老师点击格子后，抢答成功的队伍占领该格。无人答对则跳过。</p>';
-      }
+      setModeUIOnly();
       ruleText.classList.remove('fade-out');
     }, 300);
     updateUI();
@@ -792,13 +1584,12 @@
   function startGame() {
     gameState   = 'playing';
     currentTurn = 'red';
-    gridData    = new Array(TOTAL_CELLS).fill(null);
+    gridData    = new Array(totalCells).fill(null);
     selectedCellIndex = -1;
 
     refreshCellStyles();
     winnerBanner.classList.remove('show');
-    // 清除纸屑
-    document.querySelectorAll('.confetti').forEach(function(el) { el.remove(); });
+    clearAllEffects();
     closeModal();
     updateUI();
   }
@@ -806,12 +1597,12 @@
   function resetGame() {
     gameState   = 'idle';
     currentTurn = 'red';
-    gridData    = new Array(TOTAL_CELLS).fill(null);
+    gridData    = new Array(totalCells).fill(null);
     selectedCellIndex = -1;
 
     refreshCellStyles();
     winnerBanner.classList.remove('show');
-    document.querySelectorAll('.confetti').forEach(function(el) { el.remove(); });
+    clearAllEffects();
     closeModal();
     updateUI();
   }
@@ -820,15 +1611,18 @@
   // 格子点击与弹窗 — 保留 Bingo 功能版 + ripple 波纹
   // ============================================================
   function handleCellClick(index) {
-    if (gameState === 'idle') { alert('请先点击"开始游戏"'); return; }
+    if (gameState === 'idle') { alert(t('alertStartFirst')); return; }
     if (gameState === 'won') return;
     if (gridData[index] !== null) return;
 
     selectedCellIndex = index;
-    const word = boardWords[index];
+    var word = boardWords[index];
+
+    // V2.1: 点击音效
+    playClick();
 
     // 选中高亮 + ripple 波纹颜色
-    const cells = boardEl.children;
+    var cells = boardEl.children;
     for (var ci = 0; ci < cells.length; ci++) {
       cells[ci].classList.remove('selected', 'shake');
     }
@@ -838,17 +1632,17 @@
       ? (currentTurn === 'red' ? 'var(--color-red)' : 'var(--color-blue)')
       : 'var(--color-text-primary)';
 
-    // 弹窗
+    // 弹窗 — modalWord 显示完整单词，不受格子缩字影响
     modalWord.textContent = word;
     if (currentMode === 'turn') {
-      var name = currentTurn === 'red' ? '红队' : '蓝队';
-      modalSubtitle.textContent = '轮到 ' + name + ' 答题';
+      var name = currentTurn === 'red' ? t('teamRed') : t('teamBlue');
+      modalSubtitle.textContent = t('modalTurnSubtitle', {team: name});
       modalSubtitle.style.color = currentTurn === 'red'
         ? 'var(--color-red)' : 'var(--color-blue)';
       turnActions.style.display = 'flex';
       buzzActions.style.display = 'none';
     } else {
-      modalSubtitle.textContent = '哪一队抢答正确？';
+      modalSubtitle.textContent = t('modalBuzzSubtitle');
       modalSubtitle.style.color = 'var(--color-text-secondary)';
       turnActions.style.display = 'none';
       buzzActions.style.display = 'flex';
@@ -880,6 +1674,8 @@
       cell.classList.add('occupied', team, 'occupy-pop');
       setTimeout(function() { cell.classList.remove('occupy-pop'); }, 500);
     }
+    // V2.1: 占格成功音效
+    playSuccess();
     updateUI();
   }
 
@@ -927,7 +1723,7 @@
     if (gameState === 'idle') {
       startBtn.style.display = '';
       resetBtn.style.display = 'none';
-      gameStateText.textContent = '等待开始...';
+      gameStateText.textContent = t('stateWait');
       gameStateText.style.color = 'var(--color-text-secondary)';
       teamRedEl.classList.remove('active');
       teamBlueEl.classList.remove('active');
@@ -936,14 +1732,14 @@
       resetBtn.style.display = '';
 
       if (currentMode === 'turn') {
-        var name = currentTurn === 'red' ? '红队' : '蓝队';
-        gameStateText.textContent = name + '回合';
+        var name = currentTurn === 'red' ? t('teamRed') : t('teamBlue');
+        gameStateText.textContent = t('stateTurn', {team: name});
         gameStateText.style.color = currentTurn === 'red'
           ? 'var(--color-red)' : 'var(--color-blue)';
         teamRedEl.classList.toggle('active', currentTurn === 'red');
         teamBlueEl.classList.toggle('active', currentTurn === 'blue');
       } else {
-        gameStateText.textContent = '抢答进行中...';
+        gameStateText.textContent = t('stateBuzz');
         gameStateText.style.color = 'var(--color-blue)';
         teamRedEl.classList.add('active');
         teamBlueEl.classList.add('active');
@@ -955,29 +1751,40 @@
       teamBlueEl.classList.remove('active');
     }
 
-    teamRedScoreEl.textContent  = countTeam('red')  + ' 格';
-    teamBlueScoreEl.textContent = countTeam('blue') + ' 格';
-    wordCountEl.textContent = '当前词数: ' + boardWords.length + '/' + TOTAL_CELLS
-      + '（词库 ' + activeWordBank.length + ' 词）';
+    teamRedScoreEl.textContent  = t('scoreFormat', {n: countTeam('red')});
+    teamBlueScoreEl.textContent = t('scoreFormat', {n: countTeam('blue')});
+
+    // V2.0: 显示星标词数量
+    var starredCount = 0;
+    for (var si = 0; si < activeWordBank.length; si++) {
+      if (activeWordBank[si].starred) starredCount++;
+    }
+    var starInfo = starredCount > 0 ? (currentLang === 'zh' ? '（⭐' + starredCount + '）' : ' (⭐' + starredCount + ')') : '';
+    wordCountEl.textContent = t('wordCountFormat', {
+      board: boardWords.length,
+      total: totalCells,
+      bank: activeWordBank.length,
+      star: starInfo
+    });
   }
 
   // ============================================================
-  // 五连检测 — 保留 Bingo 功能版
+  // 连线检测 — V2.0
   // ============================================================
   function checkWin() {
     var dirs = [[1,0],[0,1],[1,1],[1,-1]];
-    for (var r = 0; r < BOARD_SIZE; r++) {
-      for (var c = 0; c < BOARD_SIZE; c++) {
-        var team = gridData[r * BOARD_SIZE + c];
+    for (var r = 0; r < boardSize; r++) {
+      for (var c = 0; c < boardSize; c++) {
+        var team = gridData[r * boardSize + c];
         if (!team) continue;
         for (var d = 0; d < dirs.length; d++) {
           var dc = dirs[d][0], dr = dirs[d][1];
-          var cells = [r * BOARD_SIZE + c], ok = true;
-          for (var step = 1; step < WIN_LENGTH; step++) {
+          var cells = [r * boardSize + c], ok = true;
+          for (var step = 1; step < winLength; step++) {
             var nc = c + dc * step, nr = r + dr * step;
-            if (nc < 0 || nc >= BOARD_SIZE || nr < 0 || nr >= BOARD_SIZE) { ok = false; break; }
-            if (gridData[nr * BOARD_SIZE + nc] !== team) { ok = false; break; }
-            cells.push(nr * BOARD_SIZE + nc);
+            if (nc < 0 || nc >= boardSize || nr < 0 || nr >= boardSize) { ok = false; break; }
+            if (gridData[nr * boardSize + nc] !== team) { ok = false; break; }
+            cells.push(nr * boardSize + nc);
           }
           if (ok) { triggerWin(team, cells); return; }
         }
@@ -992,26 +1799,36 @@
     gameState = 'won';
 
     // 逐格点亮 winGlow
-    winCells.forEach(function(idx, i) {
-      setTimeout(function() {
-        var c = boardEl.children[idx];
-        if (c) c.classList.add('win-light');
-      }, i * 150);
-    });
+    for (var wi = 0; wi < winCells.length; wi++) {
+      (function(idx, delay) {
+        setTimeout(function() {
+          var c = boardEl.children[idx];
+          if (c) c.classList.add('win-light');
+        }, delay);
+      })(winCells[wi], wi * 150);
+    }
 
     // 横幅 + 纸屑在点亮完成后出现
     var totalDelay = winCells.length * 150 + 300;
     setTimeout(function() {
-      winnerText.textContent = team === 'red' ? '🔴 红队获胜！' : '🔵 蓝队获胜！';
+      winnerText.textContent = team === 'red' ? t('winnerTitleRed') : t('winnerTitleBlue');
       winnerText.className = 'winner-title ' + team;
       winnerBanner.classList.add('show');
 
-      gameStateText.textContent = team === 'red' ? '🔴 红队胜出！' : '🔵 蓝队胜出！';
+      var tName = team === 'red' ? t('teamRed') : t('teamBlue');
+      gameStateText.textContent = t('stateWon', {team: tName});
       gameStateText.style.color = team === 'red' ? 'var(--color-red)' : 'var(--color-blue)';
 
       spawnConfetti(team === 'red'
         ? ['#FF4D4F', '#FFF1F0', '#FFD700', '#FFFFFF']
         : ['#1890FF', '#E6F7FF', '#FFD700', '#FFFFFF']);
+
+      // V2.1: 烟花 + 彩带
+      spawnFireworks(team);
+      spawnRibbons(team);
+
+      // V2.1: 胜利音效
+      playWin();
     }, totalDelay);
 
     updateUI();
@@ -1058,6 +1875,89 @@
   }
 
   // ============================================================
+  // V2.1: 烟花 + 彩带 + 清理
+  // ============================================================
+  var particlesToClean = [];
+
+  function clearAllEffects() {
+    // 清理所有动效残留：confetti / firework / ribbon
+    var selectors = ['.confetti', '.firework-particle', '.ribbon'];
+    for (var s = 0; s < selectors.length; s++) {
+      var els = document.querySelectorAll(selectors[s]);
+      for (var e = 0; e < els.length; e++) { els[e].remove(); }
+    }
+    particlesToClean = [];
+  }
+
+  function spawnFireworks(team) {
+    // prefers-reduced-motion 降级
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var colors = team === 'red'
+      ? ['#FF4D4F', '#FFD700', '#FFFFFF', '#FF7875', '#FFA39E']
+      : ['#1890FF', '#FFD700', '#FFFFFF', '#40A9FF', '#91D5FF'];
+
+    var boardRect = boardEl.getBoundingClientRect();
+    var cx = boardRect.left + boardRect.width / 2;
+    var cy = boardRect.top + boardRect.height / 2;
+
+    // 2 个爆点，总量克制
+    var bursts = 2;
+    for (var b = 0; b < bursts; b++) {
+      (function(bx, by) {
+        // 每个爆点 15-20 粒子
+        var count = 15 + Math.floor(Math.random() * 6);
+        for (var i = 0; i < count; i++) {
+          var p = document.createElement('div');
+          p.className = 'firework-particle';
+          p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          p.style.left = bx + 'px';
+          p.style.top  = by + 'px';
+
+          var angle = Math.random() * Math.PI * 2;
+          var dist  = 40 + Math.random() * 80;
+          var fx = Math.cos(angle) * dist;
+          var fy = Math.sin(angle) * dist;
+          p.style.setProperty('--fx', fx + 'px');
+          p.style.setProperty('--fy', fy + 'px');
+          p.style.animationDuration = (0.8 + Math.random() * 0.6) + 's';
+
+          document.body.appendChild(p);
+
+          // 1.5s 后自动消失
+          setTimeout(function() { p.remove(); }, 1500);
+        }
+      })(cx + (Math.random() - 0.5) * 300, cy + (Math.random() - 0.5) * 200);
+    }
+  }
+
+  function spawnRibbons(team) {
+    // prefers-reduced-motion 降级
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var colors = team === 'red'
+      ? ['#FF4D4F', '#FFD700', '#FFFFFF', '#FF7875', '#FFA39E', '#FFF1F0']
+      : ['#1890FF', '#FFD700', '#FFFFFF', '#40A9FF', '#91D5FF', '#E6F7FF'];
+
+    var count = 20;
+    for (var i = 0; i < count; i++) {
+      var r = document.createElement('div');
+      r.className = 'ribbon';
+      r.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      r.style.left = Math.random() * window.innerWidth + 'px';
+      r.style.top  = -(Math.random() * 120) + 'px';
+      r.style.animationDelay = Math.random() * 0.6 + 's';
+      r.style.width = (5 + Math.random() * 8) + 'px';
+      r.style.height = (16 + Math.random() * 20) + 'px';
+
+      document.body.appendChild(r);
+
+      // 3s 后自动消失
+      setTimeout(function() { r.remove(); }, 3200);
+    }
+  }
+
+  // ============================================================
   // 全屏 — 保留 Bingo 功能版
   // ============================================================
   function toggleFullscreen() {
@@ -1074,9 +1974,21 @@
   // 启动
   // ============================================================
   (function init() {
+    updateI18nUI();
     boardWords = pickWords(activeWordBank);
     renderBoard(true);
     updateUI();
+
+    // V2.0 patch: 窗口/全屏变化后重新适配长词（轻量 debounce 200ms）
+    var resizeTimer = null;
+    window.addEventListener('resize', function() {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(fitAllCellText, 200);
+    });
+    document.addEventListener('fullscreenchange', function() {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(fitAllCellText, 200);
+    });
   })();
   </script>
 </body>
