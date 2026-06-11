@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BingoGame</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F0F2F5'/%3E%3Crect x='8' y='8' width='14' height='14' rx='3' fill='%23FF4D4F'/%3E%3Crect x='25' y='8' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3Crect x='42' y='8' width='14' height='14' rx='3' fill='%231890FF'/%3E%3Crect x='8' y='25' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3Crect x='25' y='25' width='14' height='14' rx='3' fill='%23FFD700'/%3E%3Ctext x='32' y='35' text-anchor='middle' font-size='10' font-weight='bold' fill='%23262626'%3E⭐%3C/text%3E%3Crect x='42' y='25' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3Crect x='8' y='42' width='14' height='14' rx='3' fill='%231890FF'/%3E%3Crect x='25' y='42' width='14' height='14' rx='3' fill='%23FF4D4F'/%3E%3Crect x='42' y='42' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/png" sizes="64x64" href="data:image/png;base64,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" />
   <style>
     :root {
       /* === 配色 — 保留 Gemini / Bingo 功能版 === */
@@ -127,6 +127,31 @@
     .btn-blue:hover { background-color: #40A9FF; }
 
     .btn-block { width: 100%; }
+
+    .manual-wordbank {
+      display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;
+    }
+
+    .manual-wordbank-label {
+      font-size: 13px; color: var(--color-text-secondary); font-weight: 600;
+    }
+
+    .manual-wordbank-input {
+      width: 100%; min-height: 72px; max-height: 150px; resize: vertical;
+      border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      padding: 8px 10px; font: inherit; font-size: 13px; line-height: 1.35;
+      color: var(--color-text-primary); background: var(--color-surface);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .manual-wordbank-input:focus {
+      border-color: var(--color-blue);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.12);
+    }
+
+    .manual-wordbank .btn {
+      padding: 8px 10px; font-size: 13px;
+    }
 
     /* ================================================================
        Main Layout — Gemini 原版
@@ -667,6 +692,11 @@
           <button class="btn btn-outline btn-block" id="ui-btn-import" onclick="triggerImport()">导入词库</button>
           <button class="btn btn-outline btn-block" id="ui-btn-shuffle" onclick="generateBoard()">打乱棋盘</button>
         </div>
+        <div class="manual-wordbank">
+          <label class="manual-wordbank-label" for="manualWordInput" id="ui-manual-words-label">手动输入单词</label>
+          <textarea class="manual-wordbank-input" id="manualWordInput" rows="3" spellcheck="false" placeholder="Hello&#10;Welcome"></textarea>
+          <button class="btn btn-outline btn-block" id="ui-btn-apply-manual" onclick="applyManualWords()">应用输入的单词</button>
+        </div>
         <!-- V2.0: 词库设置按钮 -->
         <button class="btn btn-outline btn-block" id="ui-btn-settings" onclick="openWordBankSettings()" style="margin-bottom:12px;">⭐ 词库设置</button>
         <div class="controls-grid">
@@ -827,6 +857,9 @@ dog
       btnImport: "导入词库",
       btnShuffle: "打乱棋盘",
       btnSettings: "⭐ 词库设置",
+      manualWordsLabel: "手动输入单词",
+      manualWordsPlaceholder: "Hello\nWelcome",
+      btnApplyManual: "应用输入的单词",
       btnStart: "开始游戏",
       btnReset: "重置棋盘",
       rulesTitle: "规则提示",
@@ -851,10 +884,12 @@ dog
       alertGameInProgressWin: "游戏进行中，切换获胜条件会重置当前局，确定吗？",
       alertGameInProgressMode: "游戏进行中，切换模式将重新开始，确定吗？",
       alertGameInProgressImport: "导入词库会重置当前游戏，确定吗？",
+      alertGameInProgressManual: "应用手动输入词库会重置当前游戏，确定吗？",
       alertGameInProgressShuffle: "游戏进行中，打乱棋盘会丢失当前进度，确定吗？",
       alertGameInProgressSettings: "游戏进行中，应用词库设置会重置当前局，确定吗？",
       alertStartFirst: "请先点击\"开始游戏\"",
       alertFileEmpty: "文件为空或没有有效单词，词库未更改。",
+      alertManualEmpty: "请输入至少 1 个有效单词。",
       alertFileReadFail: "文件读取失败，请重试。",
       modalTurnSubtitle: "轮到 {team} 答题",
       modalBuzzSubtitle: "哪一队抢答正确？",
@@ -889,7 +924,7 @@ dog
       helpModeTurn: "<strong>轮流模式：</strong>两队轮流选择格子。答对占领该格，答错跳过并交换回合。",
       helpModeBuzz: "<strong>抢答模式：</strong>老师点击格子后，最先答对的队伍占领该格。无人答对则跳过。",
       helpImportTitle: "📂 导入词库与星标词",
-      helpImportDesc1: "可以导入任意 .txt 文本文件，每行一个单词。",
+      helpImportDesc1: "可以手动输入单词，也可以导入任意 .txt 文本文件，每行一个单词。",
       helpImportDesc2: "如果希望某些单词更高频出现，请在词前加星号 *。导入后可在“⭐ 词库设置”中调整星标倍数，也可以删除暂时不需要练习的词。",
       btnCloseHelp: "我知道了"
     },
@@ -911,6 +946,9 @@ dog
       btnImport: "Import Words",
       btnShuffle: "Shuffle Board",
       btnSettings: "⭐ Word Bank",
+      manualWordsLabel: "Type Words",
+      manualWordsPlaceholder: "Hello\nWelcome",
+      btnApplyManual: "Apply Typed Words",
       btnStart: "Start Game",
       btnReset: "Reset Game",
       rulesTitle: "Rules",
@@ -935,10 +973,12 @@ dog
       alertGameInProgressWin: "Game in progress. Changing win condition will reset the game. Continue?",
       alertGameInProgressMode: "Game in progress. Changing mode will reset the game. Continue?",
       alertGameInProgressImport: "Importing words will reset the current game. Continue?",
+      alertGameInProgressManual: "Applying typed words will reset the current game. Continue?",
       alertGameInProgressShuffle: "Game in progress. Shuffling will reset the current game. Continue?",
       alertGameInProgressSettings: "Game in progress. Applying settings will reset the game. Continue?",
       alertStartFirst: "Please click 'Start Game' first.",
       alertFileEmpty: "File is empty or invalid. Word bank unchanged.",
+      alertManualEmpty: "Please enter at least one valid word.",
       alertFileReadFail: "Failed to read file. Please try again.",
       modalTurnSubtitle: "{team}'s Turn to Answer",
       modalBuzzSubtitle: "Which team answered correctly?",
@@ -973,7 +1013,7 @@ dog
       helpModeTurn: "<strong>Turn-based:</strong> Teams take turns. Answer correctly to occupy a cell, incorrectly to skip.",
       helpModeBuzz: "<strong>Buzz-in:</strong> Teacher clicks a cell, the fastest team to answer correctly occupies it.",
       helpImportTitle: "📂 Words & Starred Words",
-      helpImportDesc1: "You can import any .txt file, one word per line.",
+      helpImportDesc1: "You can type words manually or import any .txt file, one word per line.",
       helpImportDesc2: "Prefix a word with an asterisk * to make it appear more often. In ⭐ Word Bank settings, you can adjust the multiplier or delete words you do not need for this round.",
       btnCloseHelp: "Got it"
     }
@@ -1012,6 +1052,9 @@ dog
     $('ui-btn-import').textContent = t('btnImport');
     $('ui-btn-shuffle').textContent = t('btnShuffle');
     $('ui-btn-settings').textContent = t('btnSettings');
+    $('ui-manual-words-label').textContent = t('manualWordsLabel');
+    $('manualWordInput').placeholder = t('manualWordsPlaceholder');
+    $('ui-btn-apply-manual').textContent = t('btnApplyManual');
     $('startBtn').textContent = t('btnStart');
     $('resetBtn').textContent = t('btnReset');
     $('ui-rules-title').textContent = t('rulesTitle');
@@ -1069,16 +1112,7 @@ dog
 
   // 原始词串（保持向后兼容）
   const defaultWordsRaw = [
-    "sun","apple","teacher","book","school","water","happy","green","jump","read",
-    "dog","cat","bird","fish","tree","flower","grass","cloud","rain","snow",
-    "red","blue","yellow","black","white","one","two","three","four","five",
-    "boy","girl","man","woman","baby","car","bus","bike","train","plane",
-    "eat","drink","sleep","play","run","big","small","tall","short","long",
-    "hot","cold","warm","cool","nice","good","bad","happy","sad","angry",
-    "head","hand","foot","eye","ear","nose","mouth","face","hair","leg",
-    "door","window","table","chair","bed","room","house","home","wall","floor",
-    "pen","pencil","ruler","eraser","bag","paper","desk","map","clock","picture",
-    "tiger","lion","bear","monkey","panda","milk","banana","orange","grape","peach"
+    "Hello","Welcome"
   ];
 
   // V2.0: 词库对象数组 { text: string, starred: boolean }
@@ -1563,33 +1597,14 @@ dog
 
     var reader = new FileReader();
     reader.onload = function(ev) {
-      var lines = ev.target.result
-        .split(/[\r\n]+/)
-        .map(function(w) { return w.trim(); })
-        .filter(function(w) { return w.length > 0; });
+      var parsedWords = parseWordBankText(ev.target.result);
 
-      if (lines.length === 0) {
+      if (parsedWords.length === 0) {
         alert(t('alertFileEmpty'));
         return;
       }
 
-      // V2.0: 解析 * 星标格式
-      activeWordBank = [];
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        var starred = false;
-        var text = line;
-
-        // 匹配 "*word" 或 "* word"
-        if (line.charAt(0) === '*') {
-          starred = true;
-          text = line.substring(1).trim();
-        }
-
-        if (text.length > 0) {
-          activeWordBank.push({ text: text, starred: starred });
-        }
-      }
+      activeWordBank = parsedWords;
 
       boardWords = pickWords(activeWordBank);
       gridData = new Array(totalCells).fill(null);
@@ -1606,6 +1621,56 @@ dog
       alert(t('alertFileReadFail'));
     };
     reader.readAsText(file, 'UTF-8');
+  }
+
+  function parseWordBankText(rawText) {
+    var parts = String(rawText || '')
+      .split(/[\r\n,，;；]+/)
+      .map(function(w) { return w.trim(); })
+      .filter(function(w) { return w.length > 0; });
+
+    var result = [];
+    for (var i = 0; i < parts.length; i++) {
+      var line = parts[i];
+      var starred = false;
+      var text = line;
+
+      // 匹配 "*word" 或 "* word"
+      if (line.charAt(0) === '*') {
+        starred = true;
+        text = line.substring(1).trim();
+      }
+
+      if (text.length > 0) {
+        result.push({ text: text, starred: starred });
+      }
+    }
+    return result;
+  }
+
+  function applyManualWords() {
+    var input = $('manualWordInput');
+    var parsedWords = parseWordBankText(input.value);
+
+    if (parsedWords.length === 0) {
+      alert(t('alertManualEmpty'));
+      input.focus();
+      return;
+    }
+
+    if (gameState === 'playing' && !confirm(t('alertGameInProgressManual'))) return;
+
+    activeWordBank = parsedWords;
+    boardWords = pickWords(activeWordBank);
+    gridData = new Array(totalCells).fill(null);
+    selectedCellIndex = -1;
+    gameState = 'idle';
+
+    updateSizeSuggest();
+    closeModal();
+    winnerBanner.classList.remove('show');
+    renderBoard(true);
+    updateUI();
   }
 
   // ============================================================
