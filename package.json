@@ -17,6 +17,7 @@
     "productName": "BingoGame",
     "files": [
       "BingoGame.html",
+      "build/icon.png",
       "main.js",
       "package.json"
     ],
@@ -27,7 +28,11 @@
       "target": [
         "portable"
       ],
+      "icon": "build/icon.png",
       "artifactName": "${productName}-${version}-Portable-${arch}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.icns"
     },
     "portable": {
       "artifactName": "${productName}-${version}-Portable-${arch}.${ext}"
