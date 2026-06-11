@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 BingoGame — 单词五子棋：抢格连线。课堂投屏用红蓝对战游戏，10×10 棋盘，五连获胜。
 
 **硬约束（不可违反）**
-- 必须保持单文件 `index.html`，不拆文件、不引入 npm/CDN/外部资源
+- 必须保持单文件 `BingoGame.html`，不拆文件、不引入 npm/CDN/外部资源
 - 必须离线可运行（双击打开即可）
 - 必须适配低分辨率一体机投屏（1366×768 不溢出）
 - 英文单词不能硬拆行（`word-break: normal`）
@@ -17,14 +17,14 @@ BingoGame — 单词五子棋：抢格连线。课堂投屏用红蓝对战游戏
 
 ```bash
 # 唯一运行方式 — 浏览器直接打开
-open index.html
+open BingoGame.html
 ```
 
 无构建步骤、无测试框架、无 lint。修改后刷新浏览器验证。
 
 ## 架构
 
-整个应用在 `index.html` 内，分三层：
+整个应用在 `BingoGame.html` 内，分三层：
 
 ### 数据层
 ```

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Word Bingo</title>
+  <title>BingoGame</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F0F2F5'/%3E%3Crect x='8' y='8' width='14' height='14' rx='3' fill='%23FF4D4F'/%3E%3Crect x='25' y='8' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3Crect x='42' y='8' width='14' height='14' rx='3' fill='%231890FF'/%3E%3Crect x='8' y='25' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3Crect x='25' y='25' width='14' height='14' rx='3' fill='%23FFD700'/%3E%3Ctext x='32' y='35' text-anchor='middle' font-size='10' font-weight='bold' fill='%23262626'%3E⭐%3C/text%3E%3Crect x='42' y='25' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3Crect x='8' y='42' width='14' height='14' rx='3' fill='%231890FF'/%3E%3Crect x='25' y='42' width='14' height='14' rx='3' fill='%23FF4D4F'/%3E%3Crect x='42' y='42' width='14' height='14' rx='3' fill='%23FFFFFF' stroke='%23D9D9D9' stroke-width='1.5'/%3E%3C/svg%3E" />
   <style>
     :root {
       /* === 配色 — 保留 Gemini / Bingo 功能版 === */
@@ -313,33 +314,45 @@
     .cell.occupied.red  { background-color: var(--color-red);  border-color: var(--color-red);  color: white; }
     .cell.occupied.blue { background-color: var(--color-blue); border-color: var(--color-blue); color: white; }
 
-    /* 5. 占格弹出 — 来自根目录动画版 */
+    /* 5. 占格弹出 — Polish */
     .cell.occupy-pop {
-      animation: occupyPop 0.5s var(--ease-spring) forwards; z-index: 5;
+      animation: occupyPop 0.4s var(--ease-spring) forwards; z-index: 5;
     }
     @keyframes occupyPop {
-      0%   { transform: scale(0.8); filter: brightness(1.5); }
-      50%  { transform: scale(1.15); filter: brightness(1.2); }
+      0%   { transform: scale(0.6); filter: brightness(1.5); opacity: 0.5; }
+      50%  { transform: scale(1.1); filter: brightness(1.2); opacity: 1; }
       100% { transform: scale(1); filter: brightness(1); }
     }
 
-    /* 6. 答错抖动 — 来自根目录动画版 */
+    /* 6. 答错抖动 — Polish */
     .cell.shake { animation: shake 0.4s ease-in-out; }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
-      20%  { transform: translateX(8px); background-color: #ffeaa7; }
-      40%  { transform: translateX(-8px); }
-      60%  { transform: translateX(5px); }
-      80%  { transform: translateX(-5px); }
+      20%  { transform: translateX(6px); background-color: #ffeaa7; }
+      40%  { transform: translateX(-6px); }
+      60%  { transform: translateX(4px); }
+      80%  { transform: translateX(-4px); }
     }
 
-    /* 8. 胜利连线发光 — 来自根目录动画版 */
+    /* 8. 胜利连线发光与扫光 — V2.2 Polish */
     .cell.win-light {
       animation: winGlow 1s infinite alternate; z-index: 8;
     }
+    .cell.win-trail {
+      position: relative; overflow: hidden;
+    }
+    .cell.win-trail::before {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.6), transparent);
+      transform: translateX(-100%); animation: sweepLight 1.5s infinite; pointer-events: none;
+    }
     @keyframes winGlow {
-      from { transform: scale(1.05); filter: brightness(1.2); box-shadow: 0 0 15px currentColor; }
-      to   { transform: scale(1.15); filter: brightness(1.5); box-shadow: 0 0 30px currentColor; }
+      from { transform: scale(1.05); filter: brightness(1.1); box-shadow: 0 0 15px currentColor; }
+      to   { transform: scale(1.15); filter: brightness(1.4); box-shadow: 0 0 30px currentColor; }
+    }
+    @keyframes sweepLight {
+      0% { transform: translateX(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) rotate(45deg); }
     }
 
     /* Modal Overlay — Gemini 原版 */
@@ -390,19 +403,41 @@
     }
 
     .wordbank-item {
-      display: flex; align-items: center; padding: 5px 10px;
-      cursor: pointer; border-bottom: 1px solid var(--color-bg);
+      display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+      border-bottom: 1px solid var(--color-bg);
       font-size: 14px; transition: background-color 0.15s;
     }
     .wordbank-item:last-child { border-bottom: none; }
     .wordbank-item:hover { background-color: var(--color-cell-hover); }
 
+    .wordbank-label {
+      display: flex; align-items: center; flex: 1; min-width: 0;
+      cursor: pointer;
+    }
+
     .wordbank-item input[type="checkbox"] {
       margin-right: 10px; width: 16px; height: 16px; cursor: pointer;
     }
 
+    .wordbank-text {
+      flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
     .wordbank-starred-badge {
-      margin-left: auto; font-size: 12px; color: #FAAD14;
+      flex: 0 0 auto; font-size: 12px; color: #FAAD14;
+    }
+
+    .wordbank-delete {
+      flex: 0 0 auto; border: 1px solid rgba(255, 77, 79, 0.35);
+      background: rgba(255, 77, 79, 0.08); color: var(--color-red);
+      border-radius: var(--radius-sm); padding: 3px 8px; font-size: 12px;
+      line-height: 1.4; cursor: pointer; transition: all 0.15s;
+    }
+
+    .wordbank-delete:hover {
+      background: rgba(255, 77, 79, 0.16);
+      border-color: rgba(255, 77, 79, 0.65);
     }
 
     .wordbank-controls {
@@ -420,15 +455,23 @@
     .wordbank-actions { display: flex; gap: 12px; }
     .wordbank-actions .btn { flex: 1; }
 
-    /* Winner Banner — Gemini 原版 */
+    /* V2.2: 玩法说明弹窗 */
+    .help-modal { max-height: 85vh; overflow-y: auto; width: min(600px, 92vw); }
+    .help-section { margin-bottom: 16px; text-align: left; }
+    .help-section h3 { font-size: 15px; color: var(--color-blue); margin-bottom: 8px; border-bottom: 1px solid var(--color-border); padding-bottom: 4px; }
+    .help-section p { font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 6px; }
+    .help-section ul { margin-left: 20px; font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 6px; }
+    .help-code { background: #f5f5f5; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 13px; margin-top: 8px; white-space: pre-wrap;}
+
+    /* Winner Banner — Polish */
     .winner-banner {
       position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%) scale(0.8);
-      background: rgba(255, 255, 255, 0.95);
+      transform: translate(-50%, -40%) scale(0.8);
+      background: rgba(255, 255, 255, 0.98);
       padding: 40px 60px; border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg); text-align: center;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.25); text-align: center;
       opacity: 0; pointer-events: none;
-      transition: all 0.6s var(--ease-spring);
+      transition: opacity 0.4s, transform 0.6s var(--ease-spring);
       z-index: 50; border: 4px solid #FFD700;
     }
 
@@ -541,6 +584,9 @@
     </div>
     <div style="display: flex; align-items: center; gap: 16px;">
       <span class="mode-tag" id="topModeTag">当前：轮流模式</span>
+      <button class="btn btn-outline" onclick="openHelpModal()" id="btn-help" style="font-weight:bold; color:var(--color-blue); border-color:var(--color-blue);">
+        玩法说明
+      </button>
       <button class="btn btn-outline" onclick="toggleSound()" id="btn-sound" style="font-weight:bold;">
         音效：关
       </button>
@@ -715,6 +761,40 @@
     </div>
   </div>
 
+  <!-- ============ V2.2: 玩法说明弹窗 ============ -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal help-modal">
+      <div class="modal-title" style="margin-bottom:12px; font-size:20px; font-weight:bold;" id="ui-help-title">玩法说明</div>
+      
+      <div class="help-section">
+        <h3 id="ui-help-goal-title">🎯 游戏目标</h3>
+        <p id="ui-help-goal-desc">红蓝两队占格，率先连成当前设定数量获胜（横、竖、斜均可）。</p>
+      </div>
+
+      <div class="help-section">
+        <h3 id="ui-help-mode-title">🕹️ 玩法模式</h3>
+        <ul>
+          <li id="ui-help-mode-turn"><strong>轮流模式：</strong>两队轮流选择格子。答对占领该格，答错跳过并交换回合。</li>
+          <li id="ui-help-mode-buzz"><strong>抢答模式：</strong>老师点击格子后，最先答对的队伍占领该格。无人答对则跳过。</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h3 id="ui-help-import-title">📂 导入词库与星标词</h3>
+        <p id="ui-help-import-desc1">可以导入任意 .txt 文本文件，每行一个单词。</p>
+        <p id="ui-help-import-desc2">如果希望某些单词更高频出现，请在词前加星号 *。导入后可在“⭐ 词库设置”中调整星标倍数。</p>
+        <div class="help-code">cat
+dog
+*catastrophic
+* photosynthesis</div>
+      </div>
+
+      <div class="wordbank-actions" style="margin-top:24px;">
+        <button class="btn btn-primary" id="ui-btn-close-help" onclick="closeHelpModal()">我知道了</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 隐藏文件选择器 -->
   <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none" onchange="handleFileImport(event)">
 
@@ -730,7 +810,7 @@
   let currentLang = 'zh';
   const i18n = {
     zh: {
-      title: "单词 Bingo",
+      title: "BingoGame",
       subtitle: "红蓝对战 · 自定义连线获胜",
       fullscreen: "全屏",
       boardSize: "棋盘尺寸",
@@ -789,6 +869,8 @@
       settingsMultiplier: "星标倍数：",
       settingsHint: "（星标词出现概率 = 普通词 × 倍数）",
       btnApply: "应用并重排棋盘",
+      btnDeleteWord: "删除",
+      alertWordBankEmpty: "词库至少需要保留 1 个单词。",
       winnerTitleRed: "🔴 红队获胜！",
       winnerTitleBlue: "🔵 蓝队获胜！",
       btnPlayAgain: "再来一局",
@@ -798,10 +880,21 @@
       soundOn: "开",
       soundOff: "关",
       confirmOk: "确定",
-      confirmCancel: "取消"
+      confirmCancel: "取消",
+      btnHelp: "玩法说明",
+      helpTitle: "玩法说明",
+      helpGoalTitle: "🎯 游戏目标",
+      helpGoalDesc: "红蓝两队占格，率先连成当前设定数量获胜（横、竖、斜均可）。",
+      helpModeTitle: "🕹️ 玩法模式",
+      helpModeTurn: "<strong>轮流模式：</strong>两队轮流选择格子。答对占领该格，答错跳过并交换回合。",
+      helpModeBuzz: "<strong>抢答模式：</strong>老师点击格子后，最先答对的队伍占领该格。无人答对则跳过。",
+      helpImportTitle: "📂 导入词库与星标词",
+      helpImportDesc1: "可以导入任意 .txt 文本文件，每行一个单词。",
+      helpImportDesc2: "如果希望某些单词更高频出现，请在词前加星号 *。导入后可在“⭐ 词库设置”中调整星标倍数，也可以删除暂时不需要练习的词。",
+      btnCloseHelp: "我知道了"
     },
     en: {
-      title: "Word Bingo",
+      title: "BingoGame",
       subtitle: "Red vs Blue · Custom line-to-win",
       fullscreen: "Fullscreen",
       boardSize: "Board Size",
@@ -860,6 +953,8 @@
       settingsMultiplier: "Multiplier:",
       settingsHint: "(Starred probability = Normal × Multiplier)",
       btnApply: "Apply & Shuffle",
+      btnDeleteWord: "Delete",
+      alertWordBankEmpty: "Keep at least one word in the word bank.",
       winnerTitleRed: "🔴 Red Wins!",
       winnerTitleBlue: "🔵 Blue Wins!",
       btnPlayAgain: "Play Again",
@@ -869,7 +964,18 @@
       soundOn: "On",
       soundOff: "Off",
       confirmOk: "OK",
-      confirmCancel: "Cancel"
+      confirmCancel: "Cancel",
+      btnHelp: "How to Play",
+      helpTitle: "How to Play",
+      helpGoalTitle: "🎯 Goal",
+      helpGoalDesc: "Red vs Blue. The first team to connect the required number of cells (horizontally, vertically, or diagonally) wins.",
+      helpModeTitle: "🕹️ Modes",
+      helpModeTurn: "<strong>Turn-based:</strong> Teams take turns. Answer correctly to occupy a cell, incorrectly to skip.",
+      helpModeBuzz: "<strong>Buzz-in:</strong> Teacher clicks a cell, the fastest team to answer correctly occupies it.",
+      helpImportTitle: "📂 Words & Starred Words",
+      helpImportDesc1: "You can import any .txt file, one word per line.",
+      helpImportDesc2: "Prefix a word with an asterisk * to make it appear more often. In ⭐ Word Bank settings, you can adjust the multiplier or delete words you do not need for this round.",
+      btnCloseHelp: "Got it"
     }
   };
 
@@ -930,7 +1036,21 @@
     $('ui-btn-apply').textContent = t('btnApply');
     $('ui-btn-cancel3').textContent = t('btnCancel');
     $('ui-btn-play-again').textContent = t('btnPlayAgain');
+    $('btn-help').textContent = t('btnHelp');
+    $('ui-help-title').textContent = t('helpTitle');
+    $('ui-help-goal-title').textContent = t('helpGoalTitle');
+    $('ui-help-goal-desc').textContent = t('helpGoalDesc');
+    $('ui-help-mode-title').textContent = t('helpModeTitle');
+    $('ui-help-mode-turn').innerHTML = t('helpModeTurn');
+    $('ui-help-mode-buzz').innerHTML = t('helpModeBuzz');
+    $('ui-help-import-title').textContent = t('helpImportTitle');
+    $('ui-help-import-desc1').textContent = t('helpImportDesc1');
+    $('ui-help-import-desc2').textContent = t('helpImportDesc2');
+    $('ui-btn-close-help').textContent = t('btnCloseHelp');
     updateSoundButton();
+    if (wordBankModal.classList.contains('show')) {
+      renderWordBankSettingsList();
+    }
 
     updateSizeSuggest();
     updateUI();
@@ -967,6 +1087,7 @@
   });
 
   let activeWordBank    = defaultWordBank.map(function(w) { return { text: w.text, starred: w.starred }; });
+  let wordBankDraft     = null;
   let boardWords        = [];    // 棋盘上每个格子的单词（纯字符串）
   let gridData          = new Array(totalCells).fill(null);
   let gameState         = 'idle';
@@ -999,6 +1120,8 @@
   var modalSubtitle  = $('modalSubtitle');
   var turnActions    = $('turnActions');
   var buzzActions    = $('buzzActions');
+
+  var helpModal      = $('helpModal');
 
   var winnerBanner   = $('winnerBanner');
   var winnerText     = $('winnerText');
@@ -1488,22 +1611,52 @@
   // ============================================================
   // V2.0: 词库设置弹窗
   // ============================================================
-  function openWordBankSettings() {
+  function createWordBankDraft() {
+    return activeWordBank.map(function(entry) {
+      return { text: entry.text, starred: entry.starred };
+    });
+  }
+
+  function syncWordBankDraftFromList() {
+    if (!wordBankDraft) return;
+    var checkboxes = wordBankList.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < checkboxes.length; i++) {
+      var idx = parseInt(checkboxes[i].dataset.index);
+      if (!isNaN(idx) && wordBankDraft[idx]) {
+        wordBankDraft[idx].starred = checkboxes[i].checked;
+      }
+    }
+  }
+
+  function renderWordBankSettingsList() {
     // 安全 DOM 构建 — 不用 innerHTML，防止 TXT 中的 < > & 污染 DOM
     wordBankList.innerHTML = '';
-    for (var i = 0; i < activeWordBank.length; i++) {
-      var entry = activeWordBank[i];
+    if (!wordBankDraft) return;
+
+    for (var i = 0; i < wordBankDraft.length; i++) {
+      var entry = wordBankDraft[i];
+
+      var row = document.createElement('div');
+      row.className = 'wordbank-item';
 
       var label = document.createElement('label');
-      label.className = 'wordbank-item';
+      label.className = 'wordbank-label';
 
       var cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.setAttribute('data-index', i);
       cb.checked = entry.starred;
+      cb.onchange = function() {
+        var idx = parseInt(this.dataset.index);
+        if (!isNaN(idx) && wordBankDraft[idx]) {
+          wordBankDraft[idx].starred = this.checked;
+        }
+      };
 
       var span = document.createElement('span');
+      span.className = 'wordbank-text';
       span.textContent = entry.text;
+      span.title = entry.text;
 
       label.appendChild(cb);
       label.appendChild(span);
@@ -1515,8 +1668,28 @@
         label.appendChild(badge);
       }
 
-      wordBankList.appendChild(label);
+      var deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'wordbank-delete';
+      deleteBtn.textContent = t('btnDeleteWord');
+      deleteBtn.title = t('btnDeleteWord') + ': ' + entry.text;
+      deleteBtn.setAttribute('aria-label', t('btnDeleteWord') + ' ' + entry.text);
+      deleteBtn.setAttribute('data-index', i);
+      deleteBtn.onclick = function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        deleteWordBankDraftEntry(parseInt(this.dataset.index));
+      };
+
+      row.appendChild(label);
+      row.appendChild(deleteBtn);
+      wordBankList.appendChild(row);
     }
+  }
+
+  function openWordBankSettings() {
+    wordBankDraft = createWordBankDraft();
+    renderWordBankSettingsList();
 
     // 设置当前倍数
     $('starMultiplierSelect').value = String(starMultiplier);
@@ -1526,6 +1699,19 @@
 
   function closeWordBankSettings() {
     wordBankModal.classList.remove('show');
+    wordBankDraft = null;
+  }
+
+  function deleteWordBankDraftEntry(idx) {
+    if (!wordBankDraft || isNaN(idx) || !wordBankDraft[idx]) return;
+    if (wordBankDraft.length <= 1) {
+      alert(t('alertWordBankEmpty'));
+      return;
+    }
+
+    syncWordBankDraftFromList();
+    wordBankDraft.splice(idx, 1);
+    renderWordBankSettingsList();
   }
 
   function applyWordBankSettings() {
@@ -1533,12 +1719,20 @@
       if (!confirm(t('alertGameInProgressSettings'))) return;
     }
 
-    // 读取 checkbox 更新 activeWordBank
-    var checkboxes = wordBankList.querySelectorAll('input[type="checkbox"]');
-    for (var i = 0; i < checkboxes.length; i++) {
-      var idx = parseInt(checkboxes[i].dataset.index);
-      activeWordBank[idx].starred = checkboxes[i].checked;
+    if (!wordBankDraft) {
+      wordBankDraft = createWordBankDraft();
     }
+
+    syncWordBankDraftFromList();
+
+    if (wordBankDraft.length === 0) {
+      alert(t('alertWordBankEmpty'));
+      return;
+    }
+
+    activeWordBank = wordBankDraft.map(function(entry) {
+      return { text: entry.text, starred: entry.starred };
+    });
 
     // 读取星标倍数
     starMultiplier = parseInt($('starMultiplierSelect').value);
@@ -1554,6 +1748,17 @@
     winnerBanner.classList.remove('show');
     renderBoard(true);
     updateUI();
+  }
+
+  // ============================================================
+  // V2.2: 玩法说明弹窗
+  // ============================================================
+  function openHelpModal() {
+    helpModal.classList.add('show');
+  }
+
+  function closeHelpModal() {
+    helpModal.classList.remove('show');
   }
 
   // ============================================================
@@ -1798,12 +2003,15 @@
   function triggerWin(team, winCells) {
     gameState = 'won';
 
-    // 逐格点亮 winGlow
+    // 逐格点亮 winGlow 与 扫光 win-trail
     for (var wi = 0; wi < winCells.length; wi++) {
       (function(idx, delay) {
         setTimeout(function() {
           var c = boardEl.children[idx];
-          if (c) c.classList.add('win-light');
+          if (c) {
+            c.classList.add('win-light');
+            c.classList.add('win-trail');
+          }
         }, delay);
       })(winCells[wi], wi * 150);
     }
@@ -1838,6 +2046,8 @@
   // 纸屑粒子系统 — 来自根目录动画版
   // ============================================================
   function spawnConfetti(colors) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
     var numParticles = 60;
     var originX = window.innerWidth / 2;
     var originY = window.innerHeight / 2;
