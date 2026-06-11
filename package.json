@@ -1,0 +1,48 @@
+{
+  "name": "bingo-game",
+  "version": "2.4.0",
+  "description": "Offline classroom Word Bingo game packaged as a desktop app.",
+  "author": "Richard1eek <ausrichard0402@gmail.com>",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist:win": "electron-builder --win portable --x64",
+    "dist:win:arm64": "electron-builder --win portable --arm64",
+    "dist:win:installer": "electron-builder --win nsis --x64"
+  },
+  "build": {
+    "appId": "com.richard1eek.bingogame",
+    "productName": "BingoGame",
+    "files": [
+      "BingoGame.html",
+      "main.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "${productName}-${version}-Portable-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable-${arch}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-Setup-${arch}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.2"
+  }
+}

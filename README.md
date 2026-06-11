@@ -9,6 +9,7 @@ Red and Blue teams compete to occupy cells by answering vocabulary questions cor
 ## Features
 
 - **Zero Dependencies**: Pure HTML/CSS/JS. Just double-click `BingoGame.html` to play entirely offline.
+- **Optional Windows EXE**: Package the same HTML game as a desktop `.exe` with Electron.
 - **Bilingual Interface**: Instantly switch between English and Chinese UI using the top-right toggle button.
 - **Dynamic Board Sizes**: Choose from `5x5`, `6x6`, `7x7`, `8x8`, `9x9`, or `10x10`. Words automatically scale to fit the cells.
 - **Custom Win Conditions**: Set the goal to Connect 3, Connect 4, or Connect 5.
@@ -31,6 +32,32 @@ Red and Blue teams compete to occupy cells by answering vocabulary questions cor
    - **Buzz-in Mode**: The teacher clicks a cell, and whichever team answers first gets the cell.
 5. **Start Game**: Click "Start Game". Connect the required number of cells to win!
 
+## Windows EXE Build
+
+The browser version remains the source of truth. The Electron wrapper only opens `BingoGame.html` in a desktop window.
+
+```powershell
+git clone https://github.com/Richard1eeK/BingoGame.git
+cd BingoGame
+npm install
+
+# Test the desktop wrapper locally
+npm run start
+
+# Build a portable Windows x64 EXE
+npm run dist:win
+
+# Optional: build a portable Windows ARM64 EXE
+npm run dist:win:arm64
+
+# Optional: build a Windows installer instead
+npm run dist:win:installer
+```
+
+The generated portable app will be in `dist/`, for example `dist/BingoGame-2.4.0-Portable-x64.exe`.
+
+For the simplest Windows build, run these commands on Windows with Node.js installed.
+
 ## Custom Vocabulary & Starred Words
 
 You can import any `.txt` file where each word is on a new line.
@@ -51,6 +78,7 @@ To highlight important words, prefix them with an asterisk `*` (e.g., `*apple` o
 ## 核心特性
 
 - **纯单机离线**：无需任何外部依赖，双击 `BingoGame.html` 即可运行。
+- **可选 Windows EXE**：用 Electron 把同一个 HTML 游戏打包成桌面 `.exe`。
 - **中英双语界面**：点击右上角按钮即可无缝切换中文/English 界面。
 - **自定义棋盘**：支持 `5x5` 到 `10x10` 六种尺寸。长单词会自动缩放字号以适应格子。
 - **自定义获胜条件**：支持选择“连 3”、“连 4”或“连 5”获胜。
@@ -72,6 +100,32 @@ To highlight important words, prefix them with an asterisk `*` (e.g., `*apple` o
    - **轮流模式**：两队轮流答题。答对占领该格，答错则跳过当前回合。
    - **抢答模式**：老师点击格子，最先答对的队伍占领该格。
 5. **开始对战**：点击“开始游戏”，率先连成指定格数的一方获胜！
+
+## Windows EXE 打包
+
+浏览器版仍然是主版本。Electron 只负责用桌面窗口打开 `BingoGame.html`，不会拆分或重写游戏文件。
+
+```powershell
+git clone https://github.com/Richard1eeK/BingoGame.git
+cd BingoGame
+npm install
+
+# 本地测试桌面壳
+npm run start
+
+# 打包免安装 Windows x64 EXE
+npm run dist:win
+
+# 可选：打包免安装 Windows ARM64 EXE
+npm run dist:win:arm64
+
+# 可选：改为打包 Windows 安装程序
+npm run dist:win:installer
+```
+
+生成的免安装程序会在 `dist/` 里，例如 `dist/BingoGame-2.4.0-Portable-x64.exe`。
+
+最简单的方式是在 Windows 上安装 Node.js 后直接运行以上命令。
 
 ## TXT 词库与星标词格式
 
