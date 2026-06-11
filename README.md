@@ -44,17 +44,22 @@ npm install
 # Test the desktop wrapper locally
 npm run start
 
-# Build a portable Windows x64 EXE
+# Build a Windows x64 ZIP. Extract it, then run BingoGame.exe.
 npm run dist:win
 
-# Optional: build a portable Windows ARM64 EXE
+# Optional: build a Windows ARM64 ZIP
 npm run dist:win:arm64
+
+# Optional: build a single-file self-extracting EXE instead.
+# This is slower on low-end classroom PCs and USB drives.
+npm run dist:win:portable
 
 # Optional: build a Windows installer instead
 npm run dist:win:installer
 ```
 
-The generated portable app will be in `dist/`, for example `dist/BingoGame-2.4.0-Portable-x64.exe`.
+The generated ZIP will be in `dist/`, for example `dist/BingoGame-2.4.0-win-x64.zip`.
+Extract the ZIP first, then run `BingoGame.exe` from the extracted folder. Do not run it directly from the ZIP or a half-copied USB drive.
 
 For the simplest Windows build, run these commands on Windows with Node.js installed.
 
@@ -113,17 +118,22 @@ npm install
 # 本地测试桌面壳
 npm run start
 
-# 打包免安装 Windows x64 EXE
+# 打包 Windows x64 ZIP。解压后运行里面的 BingoGame.exe
 npm run dist:win
 
-# 可选：打包免安装 Windows ARM64 EXE
+# 可选：打包 Windows ARM64 ZIP
 npm run dist:win:arm64
+
+# 可选：打包单文件自解压 EXE。
+# 低性能一体机和 U 盘场景不推荐，启动更慢。
+npm run dist:win:portable
 
 # 可选：改为打包 Windows 安装程序
 npm run dist:win:installer
 ```
 
-生成的免安装程序会在 `dist/` 里，例如 `dist/BingoGame-2.4.0-Portable-x64.exe`。
+生成的 ZIP 会在 `dist/` 里，例如 `dist/BingoGame-2.4.0-win-x64.zip`。
+先解压 ZIP，再运行解压目录里的 `BingoGame.exe`。不要直接从压缩包里运行，也不要从未复制完整的 U 盘文件运行。
 
 最简单的方式是在 Windows 上安装 Node.js 后直接运行以上命令。
 
