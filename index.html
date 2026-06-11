@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>单词五子棋：抢格连线</title>
+  <style>
+    :root {
+      /* === 配色 — 保留 Gemini / Bingo 功能版 === */
+      --color-red: #FF4D4F;
+      --color-red-light: #FFF1F0;
+      --color-red-border: #FFA39E;
+
+      --color-blue: #1890FF;
+      --color-blue-light: #E6F7FF;
+      --color-blue-border: #91D5FF;
+
+      --color-bg: #F0F2F5;
+      --color-surface: #FFFFFF;
+      --color-text-primary: #262626;
+      --color-text-secondary: #595959;
+      --color-text-tertiary: #8C8C8C;
+      --color-border: #D9D9D9;
+      --color-cell-bg: #FAFAFA;
+      --color-cell-hover: #F5F5F5;
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.16);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+
+      /* === 动效缓动 — 来自根目录动画版 === */
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ================================================================
+       1. 入场动画 keyframes — 来自根目录动画版
+       ================================================================ */
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideRight {
+      from { opacity: 0; transform: translateX(-30px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes scaleUpBoard {
+      from { opacity: 0; transform: scale(0.9); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes cellPop {
+      0%   { opacity: 0; transform: translateY(20px) scale(0.8); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ================================================================
+       Topbar — Gemini 原版 + slideDown 入场
+       ================================================================ */
+    .topbar {
+      height: 64px;
+      background-color: var(--color-surface);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      justify-content: space-between;
+      z-index: 10;
+      flex-shrink: 0;
+      animation: slideDown 0.6s var(--ease-spring) both;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+
+    .title {
+      font-size: 22px; font-weight: 600;
+      color: var(--color-text-primary); margin: 0;
+    }
+
+    .subtitle {
+      font-size: 14px; color: var(--color-text-secondary);
+      background: var(--color-bg); padding: 4px 12px;
+      border-radius: 20px; font-weight: 500;
+    }
+
+    .mode-tag {
+      font-size: 14px; font-weight: bold; padding: 4px 12px;
+      border-radius: 4px; background-color: var(--color-text-primary);
+      color: white; transition: all 0.3s var(--ease-smooth);
+    }
+
+    .btn {
+      cursor: pointer; border: 1px solid transparent; background: none;
+      padding: 8px 16px; font-size: 15px; border-radius: var(--radius-sm);
+      font-weight: 500; transition: all 0.2s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .btn:active { transform: translateY(1px); }
+
+    .btn-outline { border-color: var(--color-border); color: var(--color-text-primary); }
+    .btn-outline:hover { border-color: var(--color-blue); color: var(--color-blue); }
+
+    .btn-primary { background-color: var(--color-blue); color: white; }
+    .btn-primary:hover { background-color: #40A9FF; }
+
+    .btn-red { background-color: var(--color-red); color: white; }
+    .btn-red:hover { background-color: #FF7875; }
+
+    .btn-blue { background-color: var(--color-blue); color: white; }
+    .btn-blue:hover { background-color: #40A9FF; }
+
+    .btn-block { width: 100%; }
+
+    /* ================================================================
+       Main Layout — Gemini 原版
+       ================================================================ */
+    .main-container { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+    /* Sidebar — Gemini 原版 + slideRight 入场 */
+    .sidebar {
+      width: 320px; background-color: var(--color-surface);
+      border-right: 1px solid var(--color-border); padding: 24px;
+      display: flex; flex-direction: column; gap: 24px;
+      overflow-y: auto; flex-shrink: 0;
+      animation: slideRight 0.6s 0.1s var(--ease-spring) both;
+    }
+
+    .panel-section {
+      background: var(--color-bg); border-radius: var(--radius-md); padding: 16px;
+    }
+
+    .panel-title {
+      font-size: 14px; color: var(--color-text-secondary);
+      margin-bottom: 12px; font-weight: 600;
+    }
+
+    /* ================================================================
+       3. 队伍状态 — Gemini 原版 + breath 呼吸动效
+       ================================================================ */
+    .team-status { display: flex; gap: 12px; }
+
+    .team-card {
+      flex: 1; padding: 16px 12px; border-radius: var(--radius-sm);
+      text-align: center; border: 2px solid transparent;
+      transition: all 0.4s var(--ease-spring); position: relative;
+    }
+
+    .team-red  { background-color: var(--color-red-light);  color: var(--color-red); }
+    .team-blue { background-color: var(--color-blue-light); color: var(--color-blue); }
+
+    @keyframes breathRed {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0); }
+      50%      { box-shadow: 0 0 0 6px rgba(255, 77, 79, 0.25); }
+    }
+    @keyframes breathBlue {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(24, 144, 255, 0); }
+      50%      { box-shadow: 0 0 0 6px rgba(24, 144, 255, 0.25); }
+    }
+
+    .team-card.active { transform: scale(1.05); box-shadow: var(--shadow-md); }
+    .team-red.active  { border-color: var(--color-red);  animation: breathRed 2s infinite; }
+    .team-blue.active { border-color: var(--color-blue); animation: breathBlue 2s infinite; }
+
+    .team-name { font-size: 18px; font-weight: bold; }
+
+    .turn-indicator {
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+      background: var(--color-text-primary); color: white;
+      font-size: 12px; padding: 2px 8px; border-radius: 12px;
+      white-space: nowrap; opacity: 0; transition: opacity 0.3s;
+    }
+
+    .team-card.active .turn-indicator { opacity: 1; }
+
+    /* ================================================================
+       2. 模式切换 — Gemini 原版 + mode-slider 滑轨
+       ================================================================ */
+    .mode-switch {
+      position: relative; display: flex;
+      background: var(--color-border);
+      border-radius: var(--radius-sm); padding: 4px;
+    }
+
+    .mode-slider {
+      position: absolute; top: 4px; bottom: 4px; left: 4px;
+      width: calc(50% - 4px);
+      background: var(--color-surface); border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      transition: transform 0.4s var(--ease-spring);
+      z-index: 1;
+    }
+
+    .mode-switch[data-mode="buzz"] .mode-slider { transform: translateX(100%); }
+
+    .mode-btn {
+      flex: 1; padding: 8px; text-align: center; border-radius: 4px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      color: var(--color-text-secondary); transition: color 0.3s;
+      position: relative; z-index: 2;
+    }
+
+    .mode-btn.active { color: var(--color-text-primary); }
+
+    /* Controls — Gemini 原版 */
+    .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Rules — Gemini 原版 + fade 切换 */
+    .rules-box {
+      font-size: 13px; color: var(--color-text-secondary); line-height: 1.6;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .rules-box p { margin-bottom: 8px; }
+    .fade-out { opacity: 0; transform: translateY(5px); }
+
+    /* Game State Text — Gemini 原版 */
+    .game-state-text {
+      text-align: center; font-size: 18px; font-weight: bold;
+      color: var(--color-blue); padding: 8px;
+    }
+
+    /* ================================================================
+       Board Area — Gemini 原版 + scaleUpBoard 入场 + 响应式尺寸
+       ================================================================ */
+    .board-area {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 16px; position: relative; min-width: 0; overflow: hidden;
+    }
+
+    .board-container {
+      background: var(--color-surface); padding: 16px;
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      display: inline-block;
+      animation: scaleUpBoard 0.6s 0.2s var(--ease-spring) both;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+      width:  min(78vh, calc(100vw - 360px));
+      height: min(78vh, calc(100vw - 360px));
+    }
+
+    /* 7. 打乱棋盘退出动画 */
+    .board.exiting .cell {
+      animation: boardExit 0.35s var(--ease-smooth) forwards !important;
+    }
+    @keyframes boardExit {
+      to { opacity: 0; transform: rotateX(-90deg) scale(0.85); }
+    }
+
+    /* Cell — Gemini 原版 */
+    .cell {
+      background-color: var(--color-cell-bg);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: clamp(10px, 1.1vw, 15px);
+      font-weight: 600; color: var(--color-text-primary);
+      cursor: pointer; transition: transform 0.2s var(--ease-smooth), background-color 0.2s, box-shadow 0.2s;
+      user-select: none; text-align: center;
+      word-break: normal; overflow-wrap: break-word; hyphens: none;
+      padding: 1px; overflow: hidden; line-height: 1.15;
+      position: relative;
+    }
+
+    .cell:hover:not(.occupied) {
+      background-color: var(--color-cell-hover);
+      border-color: var(--color-text-tertiary);
+      transform: translateY(-2px); box-shadow: var(--shadow-sm);
+    }
+
+    /* 4. 选中态 + rippleScale — 来自根目录动画版 */
+    .cell.selected {
+      border: 3px solid currentColor;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      transform: translateY(-6px) scale(1.05); z-index: 10;
+    }
+    .cell.selected::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: var(--radius-sm); box-shadow: 0 0 0 0 currentColor;
+      animation: rippleScale 0.6s ease-out forwards; pointer-events: none;
+    }
+    @keyframes rippleScale {
+      0%   { box-shadow: 0 0 0 0 currentColor; opacity: 0.6; }
+      100% { box-shadow: 0 0 0 20px currentColor; opacity: 0; }
+    }
+
+    /* 占格态 — Gemini 原版 */
+    .cell.occupied.red  { background-color: var(--color-red);  border-color: var(--color-red);  color: white; }
+    .cell.occupied.blue { background-color: var(--color-blue); border-color: var(--color-blue); color: white; }
+
+    /* 5. 占格弹出 — 来自根目录动画版 */
+    .cell.occupy-pop {
+      animation: occupyPop 0.5s var(--ease-spring) forwards; z-index: 5;
+    }
+    @keyframes occupyPop {
+      0%   { transform: scale(0.8); filter: brightness(1.5); }
+      50%  { transform: scale(1.15); filter: brightness(1.2); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    /* 6. 答错抖动 — 来自根目录动画版 */
+    .cell.shake { animation: shake 0.4s ease-in-out; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%  { transform: translateX(8px); background-color: #ffeaa7; }
+      40%  { transform: translateX(-8px); }
+      60%  { transform: translateX(5px); }
+      80%  { transform: translateX(-5px); }
+    }
+
+    /* 8. 胜利连线发光 — 来自根目录动画版 */
+    .cell.win-light {
+      animation: winGlow 1s infinite alternate; z-index: 8;
+    }
+    @keyframes winGlow {
+      from { transform: scale(1.05); filter: brightness(1.2); box-shadow: 0 0 15px currentColor; }
+      to   { transform: scale(1.15); filter: brightness(1.5); box-shadow: 0 0 30px currentColor; }
+    }
+
+    /* Modal Overlay — Gemini 原版 */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s; backdrop-filter: blur(2px);
+    }
+
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
+
+    .modal {
+      background: var(--color-surface); border-radius: var(--radius-lg);
+      padding: 32px; width: min(400px, 90vw);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      transform: translateY(20px);
+      transition: transform 0.4s var(--ease-spring);
+    }
+
+    .modal-overlay.show .modal { transform: translateY(0); }
+
+    .modal-word {
+      font-size: 36px; font-weight: 800; text-align: center;
+      margin-bottom: 8px; color: var(--color-text-primary);
+    }
+
+    .modal-title {
+      font-size: 18px; color: var(--color-text-secondary);
+      text-align: center; margin-bottom: 24px;
+    }
+
+    .modal-actions { display: flex; flex-direction: column; gap: 12px; }
+
+    .modal-actions-row { display: flex; gap: 12px; }
+    .modal-actions-row .btn { flex: 1; }
+
+    /* Winner Banner — Gemini 原版 */
+    .winner-banner {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 40px 60px; border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg); text-align: center;
+      opacity: 0; pointer-events: none;
+      transition: all 0.6s var(--ease-spring);
+      z-index: 50; border: 4px solid #FFD700;
+    }
+
+    .winner-banner.show {
+      opacity: 1; pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .winner-title { font-size: 48px; font-weight: 800; margin-bottom: 12px; }
+    .winner-title.red  { color: var(--color-red); }
+    .winner-title.blue { color: var(--color-blue); }
+
+    /* 9. 五彩纸屑 — 来自根目录动画版 */
+    .confetti {
+      position: absolute; pointer-events: none; z-index: 40;
+      width: 10px; height: 10px; border-radius: 2px;
+    }
+
+    /* ================================================================
+       低分辨率适配 — 保留 Bingo 功能版
+       ================================================================ */
+    @media (max-width: 1366px) {
+      .sidebar { width: 260px; padding: 14px; gap: 14px; }
+      .board {
+        width: min(78vh, calc(100vw - 300px));
+        height: min(78vh, calc(100vw - 300px));
+      }
+      .board-container { padding: 12px; }
+      .cell { font-size: clamp(10px, 0.85vw, 12px); }
+    }
+
+    @media (max-width: 1100px) {
+      .sidebar { width: 220px; padding: 10px; gap: 10px; }
+      .board {
+        width: min(76vh, calc(100vw - 250px));
+        height: min(76vh, calc(100vw - 250px));
+        gap: 4px;
+      }
+      .board-container { padding: 10px; }
+      .cell { font-size: clamp(9px, 0.85vw, 11px); border-width: 1.5px; }
+      .topbar { height: 52px; padding: 0 16px; }
+      .title { font-size: 18px; }
+    }
+
+    @media (max-width: 800px) {
+      .sidebar { width: 190px; padding: 8px; gap: 8px; }
+      .board {
+        width: min(74vh, calc(100vw - 210px));
+        height: min(74vh, calc(100vw - 210px));
+        gap: 3px;
+      }
+      .board-container { padding: 8px; }
+      .cell { font-size: clamp(8px, 0.85vw, 10px); border-width: 1px; }
+      .subtitle { display: none; }
+    }
+
+    /* ================================================================
+       prefers-reduced-motion 降级
+       ================================================================ */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ 顶部栏 — Gemini 原版 ============ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title">单词五子棋</h1>
+      <span class="subtitle">红蓝对战 · 先连五格获胜</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <span class="mode-tag" id="topModeTag">当前：轮流模式</span>
+      <button class="btn btn-outline" onclick="toggleFullscreen()">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        全屏
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ 主体 — Gemini 原版 ============ -->
+  <div class="main-container">
+
+    <!-- 左侧控制区 — Gemini 原版 -->
+    <aside class="sidebar">
+
+      <div class="game-state-text" id="gameStateText">等待开始...</div>
+
+      <!-- 队伍状态 -->
+      <div class="panel-section">
+        <div class="team-status">
+          <div class="team-card team-red" id="teamRed">
+            <div class="turn-indicator" id="indicatorRed">当前回合</div>
+            <div class="team-name">红队</div>
+            <div style="font-size:12px;margin-top:4px;" id="teamRedScore">0 格</div>
+          </div>
+          <div class="team-card team-blue" id="teamBlue">
+            <div class="turn-indicator" id="indicatorBlue">当前回合</div>
+            <div class="team-name">蓝队</div>
+            <div style="font-size:12px;margin-top:4px;" id="teamBlueScore">0 格</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模式切换 — 加入 mode-slider -->
+      <div class="panel-section">
+        <div class="panel-title">玩法模式</div>
+        <div class="mode-switch" id="modeSwitchBox" data-mode="turn">
+          <div class="mode-slider"></div>
+          <div class="mode-btn active" id="modeTurn" onclick="setMode('turn')">轮流模式</div>
+          <div class="mode-btn" id="modeBuzz" onclick="setMode('buzz')">抢答模式</div>
+        </div>
+      </div>
+
+      <!-- 控制面板 -->
+      <div class="panel-section">
+        <div class="panel-title">控制面板</div>
+        <div class="controls-grid" style="margin-bottom:12px;">
+          <button class="btn btn-outline btn-block" onclick="triggerImport()">导入词库</button>
+          <button class="btn btn-outline btn-block" onclick="generateBoard()">打乱棋盘</button>
+        </div>
+        <div class="controls-grid">
+          <button class="btn btn-primary btn-block" id="startBtn" onclick="startGame()" style="grid-column:span 2;">开始游戏</button>
+          <button class="btn btn-outline btn-block" onclick="resetGame()" style="grid-column:span 2;display:none;" id="resetBtn">重置棋盘</button>
+        </div>
+        <div style="font-size:12px;color:var(--color-text-tertiary);text-align:center;margin-top:12px;" id="wordCount">
+          当前词数: 100/100
+        </div>
+      </div>
+
+      <!-- 规则提示 -->
+      <div class="panel-section">
+        <div class="panel-title">规则提示</div>
+        <div class="rules-box" id="ruleText">
+          <p><strong>【轮流模式】</strong></p>
+          <p>两队轮流选择格子。答对占领该格，答错跳过并交换回合。先连成五格的一方获胜。</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 右侧棋盘 — Gemini 原版 -->
+    <main class="board-area">
+      <div class="board-container">
+        <div class="board" id="board">
+          <!-- JS 生成格子 -->
+        </div>
+      </div>
+
+      <!-- 胜利横幅 -->
+      <div class="winner-banner" id="winnerBanner">
+        <div class="winner-title" id="winnerText">红队获胜！</div>
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:24px;">
+          <button class="btn btn-primary" onclick="resetGame()">再来一局</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ 答题弹窗 — Gemini 原版 ============ -->
+  <div class="modal-overlay" id="questionModal">
+    <div class="modal">
+      <div class="modal-word" id="modalWord">Apple</div>
+      <div class="modal-title" id="modalSubtitle">红队答题</div>
+
+      <!-- 轮流模式按钮 -->
+      <div class="modal-actions" id="turnActions">
+        <button class="btn btn-primary btn-block" onclick="handleAnswer(true)">答对，占领格子</button>
+        <button class="btn btn-outline btn-block" onclick="handleAnswer(false)">答错，跳过</button>
+        <button class="btn btn-outline btn-block" onclick="closeModal()" style="border:none;color:var(--color-text-tertiary);">取消</button>
+      </div>
+
+      <!-- 抢答模式按钮 -->
+      <div class="modal-actions" id="buzzActions" style="display:none;">
+        <div class="modal-actions-row">
+          <button class="btn btn-red" onclick="handleBuzzAnswer('red')">红队答对</button>
+          <button class="btn btn-blue" onclick="handleBuzzAnswer('blue')">蓝队答对</button>
+        </div>
+        <button class="btn btn-outline btn-block" onclick="handleBuzzAnswer('none')">无人答对，跳过</button>
+        <button class="btn btn-outline btn-block" onclick="closeModal()" style="border:none;color:var(--color-text-tertiary);">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 隐藏文件选择器 -->
+  <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none" onchange="handleFileImport(event)">
+
+  <script>
+  // ============================================================
+  // 数据层 — 保留 Bingo 功能版
+  // ============================================================
+  const BOARD_SIZE   = 10;
+  const WIN_LENGTH   = 5;
+  const TOTAL_CELLS  = BOARD_SIZE * BOARD_SIZE;
+
+  const defaultWordBank = [
+    "sun","apple","teacher","book","school","water","happy","green","jump","read",
+    "dog","cat","bird","fish","tree","flower","grass","cloud","rain","snow",
+    "red","blue","yellow","black","white","one","two","three","four","five",
+    "boy","girl","man","woman","baby","car","bus","bike","train","plane",
+    "eat","drink","sleep","play","run","big","small","tall","short","long",
+    "hot","cold","warm","cool","nice","good","bad","happy","sad","angry",
+    "head","hand","foot","eye","ear","nose","mouth","face","hair","leg",
+    "door","window","table","chair","bed","room","house","home","wall","floor",
+    "pen","pencil","ruler","eraser","bag","paper","desk","map","clock","picture",
+    "tiger","lion","bear","monkey","panda","milk","banana","orange","grape","peach"
+  ];
+
+  let activeWordBank    = [...defaultWordBank];
+  let boardWords        = [];
+  let gridData          = new Array(TOTAL_CELLS).fill(null);
+  let gameState         = 'idle';
+  let currentMode       = 'turn';
+  let currentTurn       = 'red';
+  let selectedCellIndex = -1;
+
+  // ============================================================
+  // DOM 引用
+  // ============================================================
+  const $ = id => document.getElementById(id);
+
+  const boardEl        = $('board');
+  const gameStateText  = $('gameStateText');
+  const teamRedEl      = $('teamRed');
+  const teamBlueEl     = $('teamBlue');
+  const teamRedScoreEl = $('teamRedScore');
+  const teamBlueScoreEl= $('teamBlueScore');
+  const startBtn       = $('startBtn');
+  const resetBtn       = $('resetBtn');
+  const wordCountEl    = $('wordCount');
+  const topModeTag     = $('topModeTag');
+  const ruleText       = $('ruleText');
+  const modeTurnBtn    = $('modeTurn');
+  const modeBuzzBtn    = $('modeBuzz');
+  const modeSwitchBox  = $('modeSwitchBox');
+
+  const modalOverlay   = $('questionModal');
+  const modalWord      = $('modalWord');
+  const modalSubtitle  = $('modalSubtitle');
+  const turnActions    = $('turnActions');
+  const buzzActions    = $('buzzActions');
+
+  const winnerBanner   = $('winnerBanner');
+  const winnerText     = $('winnerText');
+
+  // ============================================================
+  // 工具 — 保留 Bingo 功能版
+  // ============================================================
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function pickWords(bank) {
+    if (!bank || bank.length === 0) return [];
+    if (bank.length >= TOTAL_CELLS) {
+      return shuffle(bank).slice(0, TOTAL_CELLS);
+    }
+    const reps = Math.ceil(TOTAL_CELLS / bank.length);
+    const pool = [];
+    for (let i = 0; i < reps; i++) pool.push(...shuffle(bank));
+    return pool.slice(0, TOTAL_CELLS);
+  }
+
+  function countTeam(team) {
+    let n = 0;
+    for (let i = 0; i < TOTAL_CELLS; i++) if (gridData[i] === team) n++;
+    return n;
+  }
+
+  // ============================================================
+  // 渲染 — 带 cellPop stagger 入场
+  // ============================================================
+  function renderBoard(animate) {
+    boardEl.innerHTML = '';
+    for (let i = 0; i < TOTAL_CELLS; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = boardWords[i] || '';
+      cell.dataset.index = i;
+      cell.onclick = () => handleCellClick(i);
+
+      // cellPop 交错入场
+      if (animate) {
+        const x = i % BOARD_SIZE;
+        const y = Math.floor(i / BOARD_SIZE);
+        const delay = (x + y) * 0.02;
+        cell.style.animation = 'cellPop 0.5s var(--ease-spring) both';
+        cell.style.animationDelay = delay + 's';
+        // 动画完成后清理，否则 hover transform 冲突
+        const ms = delay * 1000 + 600;
+        (function(c) { setTimeout(function() { c.style.animation = ''; c.style.animationDelay = ''; }, ms); })(cell);
+      }
+
+      if (gridData[i]) cell.classList.add('occupied', gridData[i]);
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function refreshCellStyles() {
+    const cells = boardEl.children;
+    for (let i = 0; i < cells.length; i++) {
+      const cls = ['cell'];
+      if (gridData[i]) cls.push('occupied', gridData[i]);
+      cells[i].className = cls.join(' ');
+    }
+  }
+
+  // ============================================================
+  // 棋盘操作 — 带退出动画
+  // ============================================================
+  function generateBoard() {
+    if (gameState === 'playing' && !confirm('游戏进行中，打乱棋盘会丢失当前进度，确定吗？')) return;
+
+    // 退出动画
+    boardEl.classList.add('exiting');
+    setTimeout(function() {
+      boardEl.classList.remove('exiting');
+      boardWords = pickWords(activeWordBank);
+      gridData = new Array(TOTAL_CELLS).fill(null);
+      selectedCellIndex = -1;
+      gameState = 'idle';
+      closeModal();
+      winnerBanner.classList.remove('show');
+      renderBoard(true);
+      updateUI();
+    }, 350);
+  }
+
+  // ============================================================
+  // 词库导入 — 保留 Bingo 功能版
+  // ============================================================
+  function triggerImport() {
+    $('fileInput').click();
+  }
+
+  function handleFileImport(e) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (gameState === 'playing' && !confirm('导入词库会重置当前游戏，确定吗？')) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const words = ev.target.result
+        .split(/[\r\n]+/)
+        .map(function(w) { return w.trim(); })
+        .filter(function(w) { return w.length > 0; });
+
+      if (words.length === 0) {
+        alert('文件为空或没有有效单词，词库未更改。');
+        return;
+      }
+
+      activeWordBank = words;
+      boardWords = pickWords(activeWordBank);
+      gridData = new Array(TOTAL_CELLS).fill(null);
+      selectedCellIndex = -1;
+      gameState = 'idle';
+
+      closeModal();
+      winnerBanner.classList.remove('show');
+      renderBoard(true);
+      updateUI();
+    };
+    reader.onerror = function() {
+      alert('文件读取失败，请重试。');
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  // ============================================================
+  // 游戏控制 — 保留 Bingo 功能版
+  // ============================================================
+  function setMode(mode) {
+    if (gameState === 'playing') {
+      if (!confirm('游戏进行中，切换模式将重新开始，确定吗？')) return;
+      resetGame();
+    }
+    currentMode = mode;
+
+    // mode-slider 滑轨
+    modeSwitchBox.setAttribute('data-mode', mode);
+    modeTurnBtn.classList.toggle('active', mode === 'turn');
+    modeBuzzBtn.classList.toggle('active', mode === 'buzz');
+    topModeTag.textContent = mode === 'turn' ? '当前：轮流模式' : '当前：抢答模式';
+
+    // 规则文字 fade 切换
+    ruleText.classList.add('fade-out');
+    setTimeout(function() {
+      if (mode === 'turn') {
+        ruleText.innerHTML = '<p><strong>【轮流模式】</strong></p><p>两队轮流选择格子。答对占领该格，答错跳过并交换回合。先连成五格的一方获胜。</p>';
+      } else {
+        ruleText.innerHTML = '<p><strong>【抢答模式】</strong></p><p>老师点击格子后，抢答成功的队伍占领该格。无人答对则跳过。</p>';
+      }
+      ruleText.classList.remove('fade-out');
+    }, 300);
+    updateUI();
+  }
+
+  function startGame() {
+    gameState   = 'playing';
+    currentTurn = 'red';
+    gridData    = new Array(TOTAL_CELLS).fill(null);
+    selectedCellIndex = -1;
+
+    refreshCellStyles();
+    winnerBanner.classList.remove('show');
+    // 清除纸屑
+    document.querySelectorAll('.confetti').forEach(function(el) { el.remove(); });
+    closeModal();
+    updateUI();
+  }
+
+  function resetGame() {
+    gameState   = 'idle';
+    currentTurn = 'red';
+    gridData    = new Array(TOTAL_CELLS).fill(null);
+    selectedCellIndex = -1;
+
+    refreshCellStyles();
+    winnerBanner.classList.remove('show');
+    document.querySelectorAll('.confetti').forEach(function(el) { el.remove(); });
+    closeModal();
+    updateUI();
+  }
+
+  // ============================================================
+  // 格子点击与弹窗 — 保留 Bingo 功能版 + ripple 波纹
+  // ============================================================
+  function handleCellClick(index) {
+    if (gameState === 'idle') { alert('请先点击"开始游戏"'); return; }
+    if (gameState === 'won') return;
+    if (gridData[index] !== null) return;
+
+    selectedCellIndex = index;
+    const word = boardWords[index];
+
+    // 选中高亮 + ripple 波纹颜色
+    const cells = boardEl.children;
+    for (var ci = 0; ci < cells.length; ci++) {
+      cells[ci].classList.remove('selected', 'shake');
+    }
+    cells[index].classList.add('selected');
+    // ripple 环颜色：轮流模式用当前队色，抢答模式用中性色
+    cells[index].style.color = currentMode === 'turn'
+      ? (currentTurn === 'red' ? 'var(--color-red)' : 'var(--color-blue)')
+      : 'var(--color-text-primary)';
+
+    // 弹窗
+    modalWord.textContent = word;
+    if (currentMode === 'turn') {
+      var name = currentTurn === 'red' ? '红队' : '蓝队';
+      modalSubtitle.textContent = '轮到 ' + name + ' 答题';
+      modalSubtitle.style.color = currentTurn === 'red'
+        ? 'var(--color-red)' : 'var(--color-blue)';
+      turnActions.style.display = 'flex';
+      buzzActions.style.display = 'none';
+    } else {
+      modalSubtitle.textContent = '哪一队抢答正确？';
+      modalSubtitle.style.color = 'var(--color-text-secondary)';
+      turnActions.style.display = 'none';
+      buzzActions.style.display = 'flex';
+    }
+    modalOverlay.classList.add('show');
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove('show');
+    if (selectedCellIndex !== -1) {
+      var cell = boardEl.children[selectedCellIndex];
+      if (cell) {
+        cell.classList.remove('selected');
+        cell.style.color = '';
+      }
+      selectedCellIndex = -1;
+    }
+  }
+
+  // ============================================================
+  // 答题处理 — 保留 Bingo 功能版 + occupyPop / shake
+  // ============================================================
+  function occupyCell(index, team) {
+    gridData[index] = team;
+    var cell = boardEl.children[index];
+    if (cell) {
+      cell.classList.remove('selected');
+      cell.style.color = '';
+      cell.classList.add('occupied', team, 'occupy-pop');
+      setTimeout(function() { cell.classList.remove('occupy-pop'); }, 500);
+    }
+    updateUI();
+  }
+
+  function triggerShake(index) {
+    var cell = boardEl.children[index];
+    if (cell) {
+      cell.classList.remove('selected');
+      cell.style.color = '';
+      cell.classList.add('shake');
+      setTimeout(function() { cell.classList.remove('shake'); }, 400);
+    }
+  }
+
+  function handleAnswer(correct) {
+    var idx = selectedCellIndex;
+    if (correct && idx !== -1) {
+      occupyCell(idx, currentTurn);
+      checkWin();
+    } else if (!correct && idx !== -1) {
+      triggerShake(idx);
+    }
+    if (currentMode === 'turn') {
+      currentTurn = currentTurn === 'red' ? 'blue' : 'red';
+    }
+    closeModal();
+    updateUI();
+  }
+
+  function handleBuzzAnswer(team) {
+    var idx = selectedCellIndex;
+    if (team !== 'none' && idx !== -1) {
+      occupyCell(idx, team);
+      checkWin();
+    } else if (team === 'none' && idx !== -1) {
+      triggerShake(idx);
+    }
+    closeModal();
+    updateUI();
+  }
+
+  // ============================================================
+  // UI 更新 — 保留 Bingo 功能版
+  // ============================================================
+  function updateUI() {
+    if (gameState === 'idle') {
+      startBtn.style.display = '';
+      resetBtn.style.display = 'none';
+      gameStateText.textContent = '等待开始...';
+      gameStateText.style.color = 'var(--color-text-secondary)';
+      teamRedEl.classList.remove('active');
+      teamBlueEl.classList.remove('active');
+    } else if (gameState === 'playing') {
+      startBtn.style.display = 'none';
+      resetBtn.style.display = '';
+
+      if (currentMode === 'turn') {
+        var name = currentTurn === 'red' ? '红队' : '蓝队';
+        gameStateText.textContent = name + '回合';
+        gameStateText.style.color = currentTurn === 'red'
+          ? 'var(--color-red)' : 'var(--color-blue)';
+        teamRedEl.classList.toggle('active', currentTurn === 'red');
+        teamBlueEl.classList.toggle('active', currentTurn === 'blue');
+      } else {
+        gameStateText.textContent = '抢答进行中...';
+        gameStateText.style.color = 'var(--color-blue)';
+        teamRedEl.classList.add('active');
+        teamBlueEl.classList.add('active');
+      }
+    } else if (gameState === 'won') {
+      startBtn.style.display = 'none';
+      resetBtn.style.display = '';
+      teamRedEl.classList.remove('active');
+      teamBlueEl.classList.remove('active');
+    }
+
+    teamRedScoreEl.textContent  = countTeam('red')  + ' 格';
+    teamBlueScoreEl.textContent = countTeam('blue') + ' 格';
+    wordCountEl.textContent = '当前词数: ' + boardWords.length + '/' + TOTAL_CELLS
+      + '（词库 ' + activeWordBank.length + ' 词）';
+  }
+
+  // ============================================================
+  // 五连检测 — 保留 Bingo 功能版
+  // ============================================================
+  function checkWin() {
+    var dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for (var r = 0; r < BOARD_SIZE; r++) {
+      for (var c = 0; c < BOARD_SIZE; c++) {
+        var team = gridData[r * BOARD_SIZE + c];
+        if (!team) continue;
+        for (var d = 0; d < dirs.length; d++) {
+          var dc = dirs[d][0], dr = dirs[d][1];
+          var cells = [r * BOARD_SIZE + c], ok = true;
+          for (var step = 1; step < WIN_LENGTH; step++) {
+            var nc = c + dc * step, nr = r + dr * step;
+            if (nc < 0 || nc >= BOARD_SIZE || nr < 0 || nr >= BOARD_SIZE) { ok = false; break; }
+            if (gridData[nr * BOARD_SIZE + nc] !== team) { ok = false; break; }
+            cells.push(nr * BOARD_SIZE + nc);
+          }
+          if (ok) { triggerWin(team, cells); return; }
+        }
+      }
+    }
+  }
+
+  // ============================================================
+  // 胜利特效 — winGlow 逐格点亮 + confetti
+  // ============================================================
+  function triggerWin(team, winCells) {
+    gameState = 'won';
+
+    // 逐格点亮 winGlow
+    winCells.forEach(function(idx, i) {
+      setTimeout(function() {
+        var c = boardEl.children[idx];
+        if (c) c.classList.add('win-light');
+      }, i * 150);
+    });
+
+    // 横幅 + 纸屑在点亮完成后出现
+    var totalDelay = winCells.length * 150 + 300;
+    setTimeout(function() {
+      winnerText.textContent = team === 'red' ? '🔴 红队获胜！' : '🔵 蓝队获胜！';
+      winnerText.className = 'winner-title ' + team;
+      winnerBanner.classList.add('show');
+
+      gameStateText.textContent = team === 'red' ? '🔴 红队胜出！' : '🔵 蓝队胜出！';
+      gameStateText.style.color = team === 'red' ? 'var(--color-red)' : 'var(--color-blue)';
+
+      spawnConfetti(team === 'red'
+        ? ['#FF4D4F', '#FFF1F0', '#FFD700', '#FFFFFF']
+        : ['#1890FF', '#E6F7FF', '#FFD700', '#FFFFFF']);
+    }, totalDelay);
+
+    updateUI();
+  }
+
+  // ============================================================
+  // 纸屑粒子系统 — 来自根目录动画版
+  // ============================================================
+  function spawnConfetti(colors) {
+    var numParticles = 60;
+    var originX = window.innerWidth / 2;
+    var originY = window.innerHeight / 2;
+
+    for (var i = 0; i < numParticles; i++) {
+      (function() {
+        var p = document.createElement('div');
+        p.className = 'confetti';
+        p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+        var angle    = Math.random() * Math.PI * 2;
+        var velocity = 15 + Math.random() * 20;
+        var vx = Math.cos(angle) * velocity;
+        var vy = Math.sin(angle) * velocity - 10;
+        var x  = originX;
+        var y  = originY;
+        var rot = Math.random() * 360;
+        var rotSpeed = (Math.random() - 0.5) * 20;
+
+        document.body.appendChild(p);
+
+        function update() {
+          vy += 0.8;
+          x += vx; y += vy; rot += rotSpeed;
+          p.style.transform = 'translate(' + x + 'px, ' + y + 'px) rotate3d(1,1,1,' + rot + 'deg)';
+          if (y < window.innerHeight + 50) {
+            requestAnimationFrame(update);
+          } else {
+            p.remove();
+          }
+        }
+        update();
+      })();
+    }
+  }
+
+  // ============================================================
+  // 全屏 — 保留 Bingo 功能版
+  // ============================================================
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function() {
+        alert('全屏模式启动失败，可尝试 F11 或浏览器自带全屏按钮。');
+      });
+    } else {
+      document.exitFullscreen().catch(function() {});
+    }
+  }
+
+  // ============================================================
+  // 启动
+  // ============================================================
+  (function init() {
+    boardWords = pickWords(activeWordBank);
+    renderBoard(true);
+    updateUI();
+  })();
+  </script>
+</body>
+</html>
